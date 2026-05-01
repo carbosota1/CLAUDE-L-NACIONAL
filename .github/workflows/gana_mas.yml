@@ -1,0 +1,70 @@
+name: 🎯 GANA MÁS — Picks Automáticos
+
+on:
+  schedule:
+    # 2:30 PM RD = 18:30 UTC (RD es UTC-4)
+    - cron: '30 18 * * *'
+  workflow_dispatch:
+    inputs:
+      no_telegram:
+        description: 'Omitir envío a Telegram'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  generate-picks:
+    runs-on: ubuntu-latest
+    name: Generar picks Gana Más
+
+    steps:
+      - name: 📥 Checkout repositorio
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: 🌱 Inicializar historial si está vacío
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+          f = Path('data/history.json')
+          d = json.loads(f.read_text())
+          if not d.get('history'):
+              print('Historial vacío, generando seed...')
+              import subprocess
+              subprocess.run(['python', 'seed_history.py'], check=True)
+          else:
+              print(f'Historial OK: {len(d[\"history\"])} entradas')
+          "
+
+      - name: 🧠 Ejecutar análisis y generar picks
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          EXTRA=""
+          if [ "${{ inputs.no_telegram }}" = "true" ]; then
+            EXTRA="--no-telegram"
+          fi
+          python generate_picks.py --lottery "Gana Más" $EXTRA
+
+      - name: 💾 Commit picks al repositorio
+        run: |
+          git config user.name  "CLAUDE L-NACIONAL Bot"
+          git config user.email "bot@claude-l-nacional"
+          git add data/picks_log.json data/performance.json
+          git diff --staged --quiet || git commit -m "🎯 Picks Gana Más — $(date +'%Y-%m-%d %H:%M UTC')"
+          git push

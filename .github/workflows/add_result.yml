@@ -1,0 +1,87 @@
+name: 📥 Ingresar Resultado Real
+
+on:
+  workflow_dispatch:
+    inputs:
+      lottery:
+        description: 'Lotería'
+        required: true
+        type: choice
+        options:
+          - 'Gana Más'
+          - 'Nacional Noche'
+      p1:
+        description: '1ra posición (00-99)'
+        required: true
+        type: string
+      p2:
+        description: '2da posición (00-99)'
+        required: true
+        type: string
+      p3:
+        description: '3ra posición (00-99)'
+        required: true
+        type: string
+      date:
+        description: 'Fecha del sorteo (YYYY-MM-DD, dejar vacío = hoy)'
+        required: false
+        type: string
+      no_telegram:
+        description: 'Omitir mensaje de verificación en Telegram'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  add-result:
+    runs-on: ubuntu-latest
+    name: Procesar resultado ${{ inputs.lottery }}
+
+    steps:
+      - name: 📥 Checkout repositorio
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: 📊 Procesar resultado real
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ inputs.date }}" ]; then
+            DATE_ARG="--date ${{ inputs.date }}"
+          fi
+
+          EXTRA=""
+          if [ "${{ inputs.no_telegram }}" = "true" ]; then
+            EXTRA="--no-telegram"
+          fi
+
+          python add_result.py \
+            --lottery "${{ inputs.lottery }}" \
+            --p1 "${{ inputs.p1 }}" \
+            --p2 "${{ inputs.p2 }}" \
+            --p3 "${{ inputs.p3 }}" \
+            $DATE_ARG \
+            $EXTRA
+
+      - name: 💾 Commit historial actualizado
+        run: |
+          git config user.name  "CLAUDE L-NACIONAL Bot"
+          git config user.email "bot@claude-l-nacional"
+          git add data/history.json data/picks_log.json data/performance.json
+          git diff --staged --quiet || git commit -m "📥 Resultado ${{ inputs.lottery }} — ${{ inputs.p1 }}-${{ inputs.p2 }}-${{ inputs.p3 }} — $(date +'%Y-%m-%d')"
+          git push

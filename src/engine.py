@@ -61,9 +61,23 @@ def load_json(path: Path) -> dict:
     return {}
 
 
+class _NumpyEncoder(json.JSONEncoder):
+    """Converts numpy types to native Python types before JSON serialization."""
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.bool_):
+            return bool(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super().default(obj)
+
+
 def save_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2, cls=_NumpyEncoder), encoding="utf-8")
 
 
 def get_draws(lottery: str) -> list[dict]:

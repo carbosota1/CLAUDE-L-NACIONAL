@@ -1,4 +1,30 @@
 {
   "version": "1.0",
-  "picks": []
+  "picks": [
+    {
+      "id": "p_20260501_033254",
+      "date": "2026-05-01",
+      "lottery": "Gana Más",
+      "p1": "78",
+      "p2": "59",
+      "p3": "24",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 56.85,
+      "amount": "",
+      "analysis_snapshot": {
+        "total_draws": 90,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 83,
+        "top5": [
+          "78",
+          "59",
+          "24",
+          "54",
+          "81"
+        ]
+      }
+    }
+  ]
 }

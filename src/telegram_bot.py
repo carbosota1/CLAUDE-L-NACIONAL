@@ -35,7 +35,10 @@ def build_picks_message(analysis: dict, performance: dict, next_date: str | None
     p3 = picks[2]["num"] if len(picks) > 2 else "??"
 
     score         = picks[0]["composite_score"] if picks else 0
-    markov_pct    = analysis.get("markov_confidence", 0)
+    markov_confidence = analysis.get("markov_confidence", 0)
+    markov_max_prob   = analysis.get("markov_max_prob", analysis.get("max_prob", 0))
+    # Show max transition probability % and lift vs baseline
+    markov_pct    = markov_confidence
     mi_level      = analysis.get("mi_level", "N/A")
     chi_valid     = "✅" if analysis.get("chi2_significant") else "⚠️"
     overdue_max   = analysis.get("overdue_top", [{}])[0].get("gap", 0) if analysis.get("overdue_top") else 0

@@ -262,7 +262,7 @@ def calc_mutual_info(draws: list[dict]) -> dict:
         mi_scores[tgt] = score / len(last_nums)
 
     avg_mi = float(np.mean(list(mi_scores.values())))
-    mi_level = "Alta" if avg_mi > 0.05 else "Media" if avg_mi > 0.02 else "Baja"
+    mi_level = "Alta" if avg_mi > 0.01 else "Media" if avg_mi > 0.003 else "Baja"
 
     return {"mi_scores": mi_scores, "mi_level": mi_level, "avg_mi": avg_mi, "mi_global": float(mi_global)}
 
@@ -306,10 +306,15 @@ def calc_markov(draws: list[dict]) -> dict:
     combined = P[last_idx, :].mean(axis=0)  # average over 3 source states
 
     markov_scores = {ALL_NUMS[i]: float(combined[i]) for i in range(100)}
-    max_score = max(markov_scores.values()) if markov_scores else 1
-    confidence = min(int(max_score * 1000), 99)
 
-    return {"markov_scores": markov_scores, "confidence": confidence}
+    # Confidence = lift of top number over uniform baseline (1/100)
+    # A number appearing 2x the expected rate = 100% lift → confidence=100
+    expected_baseline = 1.0 / 100
+    max_score = max(markov_scores.values()) if markov_scores else expected_baseline
+    lift = (max_score - expected_baseline) / expected_baseline
+    confidence = min(int(lift * 100), 99)
+
+    return {"markov_scores": markov_scores, "confidence": confidence, "max_prob": round(max_score * 100, 2)}
 
 
 # ── Method 8: Bayesian Inference (Dirichlet-Multinomial) ──────────────────────
@@ -485,6 +490,7 @@ def run_full_analysis(lottery: str) -> dict:
         "mi_level":         mi["mi_level"],
         "mi_avg":           mi["avg_mi"],
         "markov_confidence": markov["confidence"],
+        "markov_max_prob":   markov.get("max_prob", 0),
         "last_draw":        draws[-1] if draws else None,
     }
 

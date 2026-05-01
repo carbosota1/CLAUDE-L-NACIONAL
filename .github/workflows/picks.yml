@@ -1,0 +1,87 @@
+name: 🎯 CLAUDE L-NACIONAL — Picks Automáticos
+
+on:
+  schedule:
+    # 12:00 PM RD (UTC-4) = 16:00 UTC
+    - cron: '0 16 * * *'
+    # 4:00 PM RD (UTC-4) = 20:00 UTC
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+    inputs:
+      lottery:
+        description: 'Lotería'
+        required: true
+        type: choice
+        options:
+          - 'Gana Más'
+          - 'Nacional Noche'
+          - 'Ambas'
+        default: 'Ambas'
+      no_telegram:
+        description: 'Omitir Telegram'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  picks:
+    runs-on: ubuntu-latest
+    name: Generar picks
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🔄 Pull últimos cambios
+        run: |
+          git config user.name  "CLAUDE L-NACIONAL Bot"
+          git config user.email "bot@claude-l-nacional"
+          git pull --rebase origin main
+
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: 🎯 Gana Más — verificar historial y generar picks
+        if: ${{ inputs.lottery == 'Gana Más' || inputs.lottery == 'Ambas' || github.event_name == 'schedule' }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          NOTG=""
+          if [ "${{ inputs.no_telegram }}" = "true" ]; then NOTG="--no-telegram"; fi
+          python generate_picks.py --lottery "Gana Más" $NOTG
+
+      - name: 🌙 Nacional Noche — verificar historial y generar picks
+        if: ${{ inputs.lottery == 'Nacional Noche' || inputs.lottery == 'Ambas' || github.event_name == 'schedule' }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          NOTG=""
+          if [ "${{ inputs.no_telegram }}" = "true" ]; then NOTG="--no-telegram"; fi
+          python generate_picks.py --lottery "Nacional Noche" $NOTG
+
+      - name: 💾 Commit cambios al repositorio
+        run: |
+          git add data/history.xlsx data/picks_log.json data/performance.json
+          if git diff --staged --quiet; then
+            echo "Sin cambios nuevos"
+            exit 0
+          fi
+          git commit -m "🎯 CLAUDE L-NACIONAL — $(date +'%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Retry $i/3..."; sleep 5
+          done

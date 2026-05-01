@@ -2,9 +2,10 @@ name: 🎯 CLAUDE L-NACIONAL — Picks Automáticos
 
 on:
   schedule:
-    # 12:00 PM RD (UTC-4) = 16:00 UTC
+    # 12:00 PM RD (UTC-4) = 16:00 UTC → Solo Gana Más
     - cron: '0 16 * * *'
-    # 4:00 PM RD (UTC-4) = 20:00 UTC
+    # 4:00 PM RD (UTC-4) = 20:00 UTC → Solo Nacional Noche
+    # (scrapes resultado de Gana Más 2:30 PM antes de generar)
     - cron: '0 20 * * *'
   workflow_dispatch:
     inputs:
@@ -15,8 +16,7 @@ on:
         options:
           - 'Gana Más'
           - 'Nacional Noche'
-          - 'Ambas'
-        default: 'Ambas'
+        default: 'Gana Más'
       no_telegram:
         description: 'Omitir Telegram'
         required: false
@@ -26,17 +26,18 @@ on:
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
-  picks:
+  # ── 12:00 PM → Picks de Gana Más ──────────────────────────────────────────
+  gana-mas:
+    if: |
+      github.event_name == 'workflow_dispatch' && inputs.lottery == 'Gana Más' ||
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '0 16')
     runs-on: ubuntu-latest
-    name: Generar picks
+    name: 🎯 Gana Más (12:00 PM)
 
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
@@ -48,7 +49,7 @@ jobs:
           git pull --rebase origin main
 
       - name: 🐍 Setup Python 3.11
-        uses: actions/setup-python@v5.6.0
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -56,8 +57,7 @@ jobs:
       - name: 📦 Instalar dependencias
         run: pip install -r requirements.txt
 
-      - name: 🎯 Gana Más — verificar historial y generar picks
-        if: ${{ inputs.lottery == 'Gana Más' || inputs.lottery == 'Ambas' || github.event_name == 'schedule' }}
+      - name: 🎯 Verificar historial y generar picks Gana Más
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -66,8 +66,57 @@ jobs:
           if [ "${{ inputs.no_telegram }}" = "true" ]; then NOTG="--no-telegram"; fi
           python generate_picks.py --lottery "Gana Más" $NOTG
 
-      - name: 🌙 Nacional Noche — verificar historial y generar picks
-        if: ${{ inputs.lottery == 'Nacional Noche' || inputs.lottery == 'Ambas' || github.event_name == 'schedule' }}
+      - name: 💾 Commit y push
+        run: |
+          git add data/history.xlsx data/picks_log.json data/performance.json
+          git diff --staged --quiet && echo "Sin cambios" && exit 0
+          git commit -m "🎯 Picks Gana Más — $(date +'%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Retry $i/3..."; sleep 5
+          done
+
+  # ── 4:00 PM → Actualiza historial con Gana Más 2:30 PM + Picks Noche ──────
+  nacional-noche:
+    if: |
+      github.event_name == 'workflow_dispatch' && inputs.lottery == 'Nacional Noche' ||
+      github.event_name == 'schedule' && startsWith(github.event.schedule, '0 20')
+    runs-on: ubuntu-latest
+    name: 🌙 Nacional Noche (4:00 PM)
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🔄 Pull últimos cambios
+        run: |
+          git config user.name  "CLAUDE L-NACIONAL Bot"
+          git config user.email "bot@claude-l-nacional"
+          git pull --rebase origin main
+
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: 🔄 Actualizar historial con resultado Gana Más 2:30 PM
+        run: |
+          echo "Scrapeando resultado de Gana Más del día..."
+          python -c "
+          from src.loader import ensure_updated
+          draws = ensure_updated('Gana Más')
+          last  = draws[-1]
+          print(f'Último Gana Más: {last[\"date\"]} → {last[\"p1\"]}-{last[\"p2\"]}-{last[\"p3\"]}')
+          "
+
+      - name: 🌙 Verificar historial y generar picks Nacional Noche
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -76,14 +125,11 @@ jobs:
           if [ "${{ inputs.no_telegram }}" = "true" ]; then NOTG="--no-telegram"; fi
           python generate_picks.py --lottery "Nacional Noche" $NOTG
 
-      - name: 💾 Commit cambios al repositorio
+      - name: 💾 Commit y push
         run: |
           git add data/history.xlsx data/picks_log.json data/performance.json
-          if git diff --staged --quiet; then
-            echo "Sin cambios nuevos"
-            exit 0
-          fi
-          git commit -m "🎯 CLAUDE L-NACIONAL — $(date +'%Y-%m-%d %H:%M UTC')"
+          git diff --staged --quiet && echo "Sin cambios" && exit 0
+          git commit -m "🌙 Picks Nacional Noche — $(date +'%Y-%m-%d %H:%M UTC')"
           for i in 1 2 3; do
             git pull --rebase origin main && git push && break
             echo "Retry $i/3..."; sleep 5

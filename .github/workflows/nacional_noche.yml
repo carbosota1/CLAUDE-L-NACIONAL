@@ -2,8 +2,10 @@ name: 🌙 NACIONAL NOCHE — Picks Automáticos
 
 on:
   schedule:
-    # 9:00 PM RD = 01:00 UTC next day (RD es UTC-4)
-    - cron: '0 1 * * *'
+    # 12:00 PM RD (UTC-4) = 16:00 UTC
+    - cron: '0 16 * * *'
+    # 4:00 PM  RD (UTC-4) = 20:00 UTC
+    - cron: '0 20 * * *'
   workflow_dispatch:
     inputs:
       no_telegram:
@@ -25,6 +27,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 🔄 Pull últimos cambios
+        run: |
+          git config user.name  "CLAUDE L-NACIONAL Bot"
+          git config user.email "bot@claude-l-nacional"
+          git pull --rebase origin main
 
       - name: 🐍 Setup Python 3.11
         uses: actions/setup-python@v5
@@ -42,12 +51,13 @@ jobs:
           from pathlib import Path
           f = Path('data/history.json')
           d = json.loads(f.read_text())
-          if not d.get('history'):
+          entries = d.get('history', [])
+          if not entries:
               print('Historial vacío, generando seed...')
               import subprocess
               subprocess.run(['python', 'seed_history.py'], check=True)
           else:
-              print(f'Historial OK: {len(d[\"history\"])} entradas')
+              print(f'Historial OK: {len(entries)} entradas')
           "
 
       - name: 🧠 Ejecutar análisis y generar picks
@@ -61,10 +71,16 @@ jobs:
           fi
           python generate_picks.py --lottery "Nacional Noche" $EXTRA
 
-      - name: 💾 Commit picks al repositorio
+      - name: 💾 Commit y push con retry
         run: |
-          git config user.name  "CLAUDE L-NACIONAL Bot"
-          git config user.email "bot@claude-l-nacional"
           git add data/picks_log.json data/performance.json
-          git diff --staged --quiet || git commit -m "🌙 Picks Nacional Noche — $(date +'%Y-%m-%d %H:%M UTC')"
-          git push
+          if git diff --staged --quiet; then
+            echo "Sin cambios que commitear"
+            exit 0
+          fi
+          git commit -m "🌙 Picks Nacional Noche — $(date +'%Y-%m-%d %H:%M UTC')"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Retry $i/3..."
+            sleep 5
+          done

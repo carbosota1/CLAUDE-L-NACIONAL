@@ -312,6 +312,30 @@
           "64"
         ]
       }
+    },
+    {
+      "id": "p_20260504_205603",
+      "date": "2026-05-04",
+      "lottery": "Nacional Noche",
+      "p1": "67",
+      "p2": "82",
+      "p3": "84",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 55.59,
+      "snapshot": {
+        "total_draws": 1852,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 99,
+        "top5": [
+          "67",
+          "82",
+          "84",
+          "20",
+          "74"
+        ]
+      }
     }
   ]
 }

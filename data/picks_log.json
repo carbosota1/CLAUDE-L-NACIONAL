@@ -336,6 +336,30 @@
           "74"
         ]
       }
+    },
+    {
+      "id": "p_20260505_171504",
+      "date": "2026-05-05",
+      "lottery": "Gana Más",
+      "p1": "20",
+      "p2": "61",
+      "p3": "64",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 64.4,
+      "snapshot": {
+        "total_draws": 1873,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 79,
+        "top5": [
+          "20",
+          "61",
+          "64",
+          "40",
+          "23"
+        ]
+      }
     }
   ]
 }

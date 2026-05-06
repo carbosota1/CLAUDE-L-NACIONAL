@@ -5,7 +5,6 @@ on:
     # 12:00 PM RD (UTC-4) = 16:00 UTC → Solo Gana Más
     - cron: '0 16 * * *'
     # 4:00 PM RD (UTC-4) = 20:00 UTC → Solo Nacional Noche
-    # (scrapes resultado de Gana Más 2:30 PM antes de generar)
     - cron: '0 20 * * *'
   workflow_dispatch:
     inputs:
@@ -22,12 +21,16 @@ on:
         required: false
         default: 'false'
         type: boolean
+      force:
+        description: 'Forzar pick aunque ya exista uno hoy'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: write
 
 jobs:
-  # ── 12:00 PM → Picks de Gana Más ──────────────────────────────────────────
   gana-mas:
     if: |
       github.event_name == 'workflow_dispatch' && inputs.lottery == 'Gana Más' ||
@@ -63,12 +66,14 @@ jobs:
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           NOTG=""
+          FORCE=""
           if [ "${{ inputs.no_telegram }}" = "true" ]; then NOTG="--no-telegram"; fi
-          python generate_picks.py --lottery "Gana Más" $NOTG
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE="--force"; fi
+          python generate_picks.py --lottery "Gana Más" $NOTG $FORCE
 
       - name: 💾 Commit y push
         run: |
-          git add data/history.xlsx data/picks_log.json data/performance.json
+          git add data/history.xlsx data/picks_log.json data/performance.json data/picks_log.csv data/performance.csv
           git diff --staged --quiet && echo "Sin cambios" && exit 0
           git commit -m "🎯 Picks Gana Más — $(date +'%Y-%m-%d %H:%M UTC')"
           for i in 1 2 3; do
@@ -76,7 +81,6 @@ jobs:
             echo "Retry $i/3..."; sleep 5
           done
 
-  # ── 4:00 PM → Actualiza historial con Gana Más 2:30 PM + Picks Noche ──────
   nacional-noche:
     if: |
       github.event_name == 'workflow_dispatch' && inputs.lottery == 'Nacional Noche' ||
@@ -108,7 +112,6 @@ jobs:
 
       - name: 🔄 Actualizar historial con resultado Gana Más 2:30 PM
         run: |
-          echo "Scrapeando resultado de Gana Más del día..."
           python -c "
           from src.loader import ensure_updated
           draws = ensure_updated('Gana Más')
@@ -122,12 +125,14 @@ jobs:
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           NOTG=""
+          FORCE=""
           if [ "${{ inputs.no_telegram }}" = "true" ]; then NOTG="--no-telegram"; fi
-          python generate_picks.py --lottery "Nacional Noche" $NOTG
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE="--force"; fi
+          python generate_picks.py --lottery "Nacional Noche" $NOTG $FORCE
 
       - name: 💾 Commit y push
         run: |
-          git add data/history.xlsx data/picks_log.json data/performance.json
+          git add data/history.xlsx data/picks_log.json data/performance.json data/picks_log.csv data/performance.csv
           git diff --staged --quiet && echo "Sin cambios" && exit 0
           git commit -m "🌙 Picks Nacional Noche — $(date +'%Y-%m-%d %H:%M UTC')"
           for i in 1 2 3; do

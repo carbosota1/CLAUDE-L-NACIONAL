@@ -186,9 +186,32 @@ def main():
     print(f"  📋 CSV sincronizado: {synced} picks\n")
 
     # ── 2. Check if already picked today ─────────────────────────────────────
-    if not args.force and already_picked_today(args.lottery):
-        print(f"  ⏭️  Ya existe un pick para hoy ({args.lottery}). Usa --force para regenerar.")
-        sys.exit(0)
+    if already_picked_today(args.lottery):
+        if args.force:
+            # --force: resend existing pick to Telegram, do NOT regenerate
+            print(f"  📤 Pick de hoy ya existe. Reenviando a Telegram...")
+            picks   = load_picks()
+            today   = datetime.date.today().isoformat()
+            existing = [p for p in picks if p.get("lottery") == args.lottery and p.get("date") == today]
+            if existing:
+                pick = sorted(existing, key=lambda x: x.get("id",""))[-1]
+                perf = load_performance(args.lottery)
+                if not args.no_telegram:
+                    # Rebuild analysis shell just for the message
+                    draws   = ensure_updated(args.lottery)
+                    analysis = run_full_analysis_from_draws(draws, args.lottery)
+                    # Override picks with today's existing pick
+                    analysis["picks"][0]["num"] = pick["p1"]
+                    analysis["picks"][1]["num"] = pick["p2"]
+                    analysis["picks"][2]["num"] = pick["p3"]
+                    send_picks(analysis, perf)
+                    print(f"  ✅ Pick reenviado: {pick['p1']} — {pick['p2']} — {pick['p3']}")
+                else:
+                    print(f"  ℹ️  Pick de hoy: {pick['p1']} — {pick['p2']} — {pick['p3']}")
+            sys.exit(0)
+        else:
+            print(f"  ⏭️  Ya existe un pick para hoy ({args.lottery}). Usa --force para reenviar a Telegram.")
+            sys.exit(0)
 
     # ── 3. Ensure history is up to date ──────────────────────────────────────
     print("📂 Verificando historial...")

@@ -647,7 +647,7 @@
       "p2": "51",
       "p3": "61",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 53.03,
       "snapshot": {
         "total_draws": 1857,
@@ -662,7 +662,13 @@
           "87",
           "96"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "84",
+      "real_p2": "37",
+      "real_p3": "17",
+      "verified_at": "2026-05-10T20:34:57.587718"
     },
     {
       "id": "p_20260510_164234",
@@ -686,6 +692,31 @@
           "93",
           "20",
           "46"
+        ]
+      }
+    },
+    {
+      "id": "p_20260510_203458",
+      "date": "2026-05-10",
+      "lottery": "Nacional Noche",
+      "p1": "74",
+      "p2": "84",
+      "p3": "41",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 53.08,
+      "snapshot": {
+        "total_draws": 1858,
+        "recent_draws": 30,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 87,
+        "top5": [
+          "74",
+          "84",
+          "41",
+          "81",
+          "94"
         ]
       }
     }

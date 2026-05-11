@@ -30,8 +30,9 @@ PICKS_HEADERS = [
 
 PERF_HEADERS = [
     "fecha", "loteria", "total_picks", "picks_verificados",
-    "aciertos", "hit_rate_pct", "racha", "roi_pct",
-    "total_invertido", "total_ganado", "actualizado_en"
+    "aciertos_main", "aciertos_alt", "aciertos_total",
+    "hit_rate_pct", "main_hit_rate_pct", "alt_hit_rate_pct",
+    "racha", "roi_pct", "total_invertido", "total_ganado", "actualizado_en"
 ]
 
 
@@ -107,7 +108,11 @@ def save_performance_to_csv(lottery: str, perf: dict) -> None:
         perf.get("total_picks", 0),
         perf.get("verified_picks", 0),
         perf.get("hits", 0),
+        perf.get("alt_hits", 0),
+        perf.get("total_hits", 0),
         perf.get("hit_rate", 0.0),
+        perf.get("main_hit_rate", 0.0),
+        perf.get("alt_hit_rate", 0.0),
         perf.get("streak", 0),
         perf.get("roi", 0.0),
         perf.get("total_invested", 0.0),

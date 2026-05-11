@@ -47,8 +47,8 @@ def already_picked_today(lottery: str) -> bool:
 
 def auto_verify_last_pick(lottery: str, draws: list[dict]) -> None:
     """
-    Automatically verify the most recent pending pick using the latest
-    real result from the history (last draw in Excel).
+    Verify the most recent pending pick using the latest real result.
+    Checks top 5 picks (p1-p5) against real result in any position.
     """
     picks = load_picks()
     pending = [p for p in picks if p.get("lottery") == lottery and p.get("status") == "pending"]
@@ -58,40 +58,77 @@ def auto_verify_last_pick(lottery: str, draws: list[dict]) -> None:
     last_pick = sorted(pending, key=lambda x: x.get("id", ""))[-1]
     last_real = draws[-1]
 
-    # Only verify if the real result date >= pick date
+    # Only verify if real result date >= pick date
     if last_real["date"] < last_pick.get("date", ""):
         return
 
-    pick_nums = [last_pick["p1"], last_pick["p2"], last_pick["p3"]]
     real_nums = [last_real["p1"], last_real["p2"], last_real["p3"]]
 
-    any_match = [n for n in pick_nums if n in real_nums]
+    # Build full candidate list: p1, p2, p3 + alternates from snapshot
+    main_picks  = [last_pick["p1"], last_pick["p2"], last_pick["p3"]]
+    top5_snap   = last_pick.get("snapshot", {}).get("top5", [])
+    alt_picks   = [n for n in top5_snap if n not in main_picks][:2]  # 4th and 5th
+    all_picks   = main_picks + alt_picks  # up to 5 numbers
+
+    # Check main picks first (paid positions)
+    any_match = [n for n in main_picks if n in real_nums]
     result = "miss"
     payout = 0.0
     amt    = float(last_pick.get("amount") or 0)
 
-    if len(any_match) == 3:        result = "tripleta"; payout = amt * 20000
-    elif len(any_match) >= 2:      result = "pale";     payout = amt * 1000
-    elif pick_nums[0]==real_nums[0]: result = "1ra";    payout = amt * 60
-    elif pick_nums[1]==real_nums[1]: result = "2da";    payout = amt * 8
-    elif pick_nums[2]==real_nums[2]: result = "3ra";    payout = amt * 5
+    if len(any_match) == 3:
+        result = "tripleta"; payout = amt * 20000
+    elif len(any_match) >= 2:
+        result = "pale";     payout = amt * 1000
+    elif main_picks[0] == real_nums[0]:
+        result = "1ra";      payout = amt * 60
+    elif main_picks[1] == real_nums[1]:
+        result = "2da";      payout = amt * 8
+    elif main_picks[2] == real_nums[2]:
+        result = "3ra";      payout = amt * 5
+
+    # Check alternates — no payout but register as "alt_hit" for tracking
+    alt_hit = False
+    alt_hit_num = ""
+    if result == "miss" and alt_picks:
+        for alt in alt_picks:
+            if alt in real_nums:
+                alt_hit = True
+                alt_hit_num = alt
+                result = "alt_hit"
+                break
 
     # Update JSON
     updated = []
     for p in picks:
         if p["id"] == last_pick["id"]:
             p.update({
-                "status": "verified", "result": result, "payout": payout,
-                "real_p1": real_nums[0], "real_p2": real_nums[1], "real_p3": real_nums[2],
+                "status":     "verified",
+                "result":     result,
+                "payout":     payout,
+                "real_p1":    real_nums[0],
+                "real_p2":    real_nums[1],
+                "real_p3":    real_nums[2],
+                "all_picks":  all_picks,
+                "alt_hit":    alt_hit,
+                "alt_hit_num": alt_hit_num,
                 "verified_at": datetime.datetime.now().isoformat(),
             })
         updated.append(p)
     save_json(PICKS_FILE, {"picks": updated})
 
-    result_label = {"miss":"❌ MISS","1ra":"🥇 1RA","2da":"🥈 2DA",
-                    "3ra":"🥉 3RA","pale":"💜 PALÉ","tripleta":"🟢 TRIPLETA"}.get(result, result)
+    result_label = {
+        "miss":     "❌ MISS",
+        "1ra":      "🥇 1RA",
+        "2da":      "🥈 2DA",
+        "3ra":      "🥉 3RA",
+        "pale":     "💜 PALÉ",
+        "tripleta": "🟢 TRIPLETA",
+        "alt_hit":  f"🔵 ALTERNATIVO ({alt_hit_num})",
+    }.get(result, result)
+
     print(f"  🔍 Pick anterior verificado: {result_label}")
-    print(f"     Pick: {pick_nums[0]}-{pick_nums[1]}-{pick_nums[2]} | Real: {real_nums[0]}-{real_nums[1]}-{real_nums[2]}")
+    print(f"     Main: {main_picks[0]}-{main_picks[1]}-{main_picks[2]} | Alts: {alt_picks} | Real: {real_nums[0]}-{real_nums[1]}-{real_nums[2]}")
 
 
 def save_pick(analysis: dict) -> dict:

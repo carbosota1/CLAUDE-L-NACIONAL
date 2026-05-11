@@ -46,6 +46,8 @@ def build_picks_message(analysis: dict, performance: dict, next_date: str | None
     chi2_pval     = round(analysis.get("chi2_pvalue", 1.0), 4)
 
     hit_rate      = performance.get("hit_rate", 0)
+    main_hit_rate = performance.get("main_hit_rate", hit_rate)
+    alt_hit_rate  = performance.get("alt_hit_rate", 0)
     streak        = performance.get("streak", 0)
     roi           = performance.get("roi", 0)
     streak_emoji  = "🔥" if streak > 0 else "❄️" if streak < 0 else "➖"
@@ -87,6 +89,7 @@ def build_picks_message(analysis: dict, performance: dict, next_date: str | None
 📉 <b>PERFORMANCE DEL SISTEMA</b>
 ━━━━━━━━━━━━━━━━━━━━━
 Hit rate:      <b>{hit_rate}%</b> (últimos 30)
+🎯 Main hits:   <b>{main_hit_rate}%</b>  |  🔵 Alts: <b>{alt_hit_rate}%</b>
 Racha actual:  <b>{"+"+str(streak) if streak > 0 else str(streak)}</b> {streak_emoji}
 ROI estimado:  <b>{roi_sign}{roi}%</b>
 ━━━━━━━━━━━━━━━━━━━━━

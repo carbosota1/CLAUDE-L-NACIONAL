@@ -26,22 +26,22 @@ from sklearn.metrics import mutual_info_score
 ALL_NUMS  = [str(i).zfill(2) for i in range(100)]
 NUM_IDX   = {n: i for i, n in enumerate(ALL_NUMS)}
 DATA_DIR  = Path(__file__).parent.parent / "data"
-HALF_LIFE = 15   # Reduced: more weight on recent draws
+HALF_LIFE = 10   # Further reduced: last 2 weeks dominate
 
 # Updated weights
 WEIGHTS = {
-    "rating":    0.12,  # Rating RD
-    "overdue":   0.05,  # Reduced: was 0.10
+    "rating":    0.10,  # Rating RD
+    "overdue":   0.04,  # Reduced
     "cooccur":   0.08,  # Co-occurrence
-    "sum":       0.05,  # Sum analysis
-    "chi2":      0.12,  # Chi²
-    "mi":        0.13,  # Mutual Information
-    "markov":    0.20,  # Increased: was 0.15
-    "bayes":     0.10,  # Bayesian
-    "monte":     0.05,  # Monte Carlo
-    "position":  0.05,  # NEW: position analysis
-    "range":     0.03,  # NEW: range dominance
-    "digit":     0.02,  # NEW: digit analysis
+    "sum":       0.04,  # Sum analysis
+    "chi2":      0.10,  # Chi²
+    "mi":        0.12,  # Mutual Information
+    "markov":    0.20,  # Highest: best real-time signal
+    "bayes":     0.08,  # Bayesian
+    "monte":     0.04,  # Monte Carlo
+    "position":  0.06,  # Position analysis
+    "range":     0.08,  # Increased: ranges matter
+    "digit":     0.06,  # Increased: digit patterns matter
 }
 
 PRIZE_MULTIPLIERS = {
@@ -86,8 +86,8 @@ def wma_weight(idx: int, total: int, half_life: float = HALF_LIFE) -> float:
 
 # ── Recent window (last 30 draws) ─────────────────────────────────────────────
 def split_windows(draws: list[dict]) -> tuple[list, list]:
-    """Split draws into recent (last 30) and full history."""
-    recent = draws[-30:] if len(draws) >= 30 else draws
+    """Split draws into recent (last 45) and full history."""
+    recent = draws[-45:] if len(draws) >= 45 else draws
     return draws, recent
 
 
@@ -298,53 +298,68 @@ def calc_position_scores(draws: list[dict], recent: list[dict]) -> dict[str, dic
 # ── NEW Method 11: Range Dominance ────────────────────────────────────────────
 def calc_range_scores(recent: list[dict]) -> dict[str, float]:
     """
-    Detect which range (00-24, 25-49, 50-74, 75-99) is hot in last 7 draws.
-    Score numbers in the hot range higher.
+    Detect which range is hot using last 14 draws.
+    Uses exponential decay so very recent draws matter more.
+    Amplifies scores for hot ranges above baseline (25%).
     """
-    last7 = recent[-7:] if len(recent) >= 7 else recent
-    ranges = {"00-24": 0, "25-49": 0, "50-74": 0, "75-99": 0}
-    for d in last7:
+    last14 = recent[-14:] if len(recent) >= 14 else recent
+    ranges = {"00-24": 0.0, "25-49": 0.0, "50-74": 0.0, "75-99": 0.0}
+    n = len(last14)
+    for idx, d in enumerate(last14):
+        w = math.exp(-(n - 1 - idx) / 7)  # half-life=7 draws
         for p in [d["p1"], d["p2"], d["p3"]]:
             v = int(p)
-            if   v <= 24: ranges["00-24"] += 1
-            elif v <= 49: ranges["25-49"] += 1
-            elif v <= 74: ranges["50-74"] += 1
-            else:         ranges["75-99"] += 1
+            if   v <= 24: ranges["00-24"] += w
+            elif v <= 49: ranges["25-49"] += w
+            elif v <= 74: ranges["50-74"] += w
+            else:         ranges["75-99"] += w
     total = sum(ranges.values()) or 1
-    # Hot range = above 25% baseline
-    range_probs = {k: v/total for k, v in ranges.items()}
+    baseline = 0.25  # uniform baseline per range
+    # Amplify: ranges above baseline get boosted, below get penalized
+    range_scores = {}
+    for rng, cnt in ranges.items():
+        prob = cnt / total
+        # Score = how much above/below baseline, amplified
+        range_scores[rng] = max(0.1, prob / baseline)
     scores = {}
-    for n in ALL_NUMS:
-        v = int(n)
+    for num in ALL_NUMS:
+        v = int(num)
         if   v <= 24: rng = "00-24"
         elif v <= 49: rng = "25-49"
         elif v <= 74: rng = "50-74"
         else:         rng = "75-99"
-        scores[n] = range_probs[rng]
+        scores[num] = range_scores[rng]
     return scores
 
 
 # ── NEW Method 12: Digit Analysis ────────────────────────────────────────────
 def calc_digit_scores(recent: list[dict]) -> dict[str, float]:
     """
-    Analyze hot decenas (tens digit) and unidades (units digit) in last 14 draws.
-    If decena 6 is hot, boost all numbers 60-69.
+    Analyze hot decenas and unidades in last 21 draws with decay.
+    Amplifies numbers whose tens AND units are both hot.
     """
-    last14 = recent[-14:] if len(recent) >= 14 else recent
-    tens_freq  = defaultdict(int)
-    units_freq = defaultdict(int)
-    for d in last14:
+    last21 = recent[-21:] if len(recent) >= 21 else recent
+    n = len(last21)
+    tens_freq  = defaultdict(float)
+    units_freq = defaultdict(float)
+    for idx, d in enumerate(last21):
+        w = math.exp(-(n - 1 - idx) / 10)
         for p in [d["p1"], d["p2"], d["p3"]]:
-            tens_freq[int(p) // 10]  += 1
-            units_freq[int(p) % 10]  += 1
+            tens_freq[int(p) // 10]  += w
+            units_freq[int(p) % 10]  += w
     total_t = sum(tens_freq.values())  or 1
     total_u = sum(units_freq.values()) or 1
+    base_t = 1/10  # 10 possible tens
+    base_u = 1/10  # 10 possible units
     scores = {}
-    for n in ALL_NUMS:
-        v  = int(n)
-        t  = tens_freq.get(v // 10, 0)  / total_t
-        u  = units_freq.get(v % 10, 0)  / total_u
-        scores[n] = (t + u) / 2
+    for num in ALL_NUMS:
+        v = int(num)
+        t_prob = tens_freq.get(v // 10, 0) / total_t
+        u_prob = units_freq.get(v % 10, 0)  / total_u
+        # Lift over baseline for both digits, multiply for amplification
+        t_lift = t_prob / base_t
+        u_lift = u_prob / base_u
+        scores[num] = (t_lift * u_lift) ** 0.5  # geometric mean
     return scores
 
 
@@ -516,23 +531,36 @@ def calc_performance(lottery: str | None = None) -> dict:
         return {"total_picks": 0, "verified_picks": 0, "hits": 0,
                 "hit_rate": 0.0, "streak": 0, "roi": 0.0,
                 "total_invested": 0.0, "total_won": 0.0}
-    recent30 = verified[-30:]
-    hits     = sum(1 for p in recent30 if p.get("result") != "miss")
-    hit_rate = round(hits / len(recent30) * 100, 1) if recent30 else 0.0
-    streak   = 0
-    first_win = verified[-1].get("result") != "miss"
+    recent30  = verified[-30:]
+    # Count main hits (paid) and alt hits separately
+    main_hits = sum(1 for p in recent30 if p.get("result") not in ("miss", "alt_hit", None, ""))
+    alt_hits  = sum(1 for p in recent30 if p.get("result") == "alt_hit")
+    total_hits = main_hits + alt_hits
+    hit_rate  = round(total_hits / len(recent30) * 100, 1) if recent30 else 0.0
+    main_hit_rate = round(main_hits / len(recent30) * 100, 1) if recent30 else 0.0
+    alt_hit_rate  = round(alt_hits  / len(recent30) * 100, 1) if recent30 else 0.0
+
+    # Streak: only counts main hits (paid results)
+    streak    = 0
+    first_win = verified[-1].get("result") not in ("miss", "alt_hit", None, "")
     for p in reversed(verified):
-        is_win = p.get("result") != "miss"
+        is_win = p.get("result") not in ("miss", "alt_hit", None, "")
         if is_win == first_win: streak += 1 if first_win else -1
         else: break
+
     total_invested = sum(float(p.get("amount", 0) or 0) for p in verified)
     total_won      = sum(float(p.get("payout", 0) or 0) for p in verified)
     roi = round((total_won - total_invested) / total_invested * 100, 1) if total_invested > 0 else 0.0
+
     return {
         "total_picks":    len(picks),
         "verified_picks": len(verified),
-        "hits":           hits,
+        "hits":           main_hits,
+        "alt_hits":       alt_hits,
+        "total_hits":     total_hits,
         "hit_rate":       hit_rate,
+        "main_hit_rate":  main_hit_rate,
+        "alt_hit_rate":   alt_hit_rate,
         "streak":         streak,
         "roi":            roi,
         "total_invested": total_invested,

@@ -51,9 +51,6 @@ jobs:
           git config user.email "bot@claude-l-nacional"
           git pull --rebase origin main
 
-        with:
-          python-version: '3.11'
-          cache: 'pip'
 
       - name: 📦 Instalar dependencias
         run: pip install -r requirements.txt
@@ -99,9 +96,6 @@ jobs:
           git config user.email "bot@claude-l-nacional"
           git pull --rebase origin main
 
-        with:
-          python-version: '3.11'
-          cache: 'pip'
 
       - name: 📦 Instalar dependencias
         run: pip install -r requirements.txt

@@ -30,18 +30,19 @@ HALF_LIFE = 10   # Further reduced: last 2 weeks dominate
 
 # Updated weights
 WEIGHTS = {
-    "rating":    0.10,  # Rating RD
-    "overdue":   0.04,  # Reduced
-    "cooccur":   0.08,  # Co-occurrence
-    "sum":       0.04,  # Sum analysis
-    "chi2":      0.10,  # Chi²
-    "mi":        0.12,  # Mutual Information
-    "markov":    0.20,  # Highest: best real-time signal
-    "bayes":     0.08,  # Bayesian
-    "monte":     0.04,  # Monte Carlo
-    "position":  0.06,  # Position analysis
-    "range":     0.08,  # Increased: ranges matter
-    "digit":     0.06,  # Increased: digit patterns matter
+    "rating":    0.08,
+    "overdue":   0.03,
+    "cooccur":   0.07,
+    "sum":       0.04,
+    "chi2":      0.09,
+    "mi":        0.10,
+    "markov":    0.20,
+    "bayes":     0.07,
+    "monte":     0.04,
+    "position":  0.07,
+    "range":     0.08,
+    "digit":     0.07,
+    "consec":    0.06,
 }
 
 PRIZE_MULTIPLIERS = {
@@ -161,7 +162,11 @@ def calc_sum_profile(draws: list[dict]) -> dict:
 def sum_score(num: str, candidates: list[str], profile: dict) -> float:
     base  = sum(int(c) for c in candidates[:2]) if len(candidates) >= 2 else 99
     total = base + int(num)
-    return 1.0 if profile["low"] <= total <= profile["high"] else 0.2
+    in_core  = profile.get("p10", profile["low"]) <= total <= profile.get("p90", profile["high"])
+    in_broad = profile["low"] <= total <= profile["high"]
+    if in_core:  return 1.0
+    if in_broad: return 0.6
+    return 0.2
 
 
 # ── Method 5: Chi² ───────────────────────────────────────────────────────────
@@ -363,6 +368,48 @@ def calc_digit_scores(recent: list[dict]) -> dict[str, float]:
     return scores
 
 
+# ── NEW: Consecutive Number Bonus ────────────────────────────────────────────
+def calc_consecutive_bonus(recent: list[dict]) -> dict[str, float]:
+    """
+    36% of real results have numbers within ±2 of each other.
+    Boost numbers close to frequently occurring recent numbers.
+    """
+    last14 = recent[-14:] if len(recent) >= 14 else recent
+    freq = defaultdict(float)
+    n = len(last14)
+    for idx, d in enumerate(last14):
+        w = math.exp(-(n - 1 - idx) / 7)
+        for p in [d["p1"], d["p2"], d["p3"]]:
+            freq[int(p)] += w
+    scores = {}
+    for num in ALL_NUMS:
+        v = int(num)
+        neighbor_score = sum(freq.get(v + delta, 0) for delta in range(-3, 4) if delta != 0)
+        scores[num] = neighbor_score
+    return scores
+
+
+# ── NEW: Consecutive Number Bonus ────────────────────────────────────────────
+def calc_consecutive_bonus(recent: list[dict]) -> dict[str, float]:
+    """
+    36% of real results have numbers within ±2 of each other.
+    Boost numbers close to frequently occurring recent numbers.
+    """
+    last14 = recent[-14:] if len(recent) >= 14 else recent
+    freq = defaultdict(float)
+    n = len(last14)
+    for idx, d in enumerate(last14):
+        w = math.exp(-(n - 1 - idx) / 7)
+        for p in [d["p1"], d["p2"], d["p3"]]:
+            freq[int(p)] += w
+    scores = {}
+    for num in ALL_NUMS:
+        v = int(num)
+        neighbor_score = sum(freq.get(v + delta, 0) for delta in range(-3, 4) if delta != 0)
+        scores[num] = neighbor_score
+    return scores
+
+
 # ── NEW: Anti-repetition Penalty ─────────────────────────────────────────────
 def calc_anti_repeat_penalty(lottery: str) -> dict[str, float]:
     """
@@ -427,6 +474,10 @@ def run_full_analysis(lottery: str) -> dict:
     range_sc  = calc_range_scores(recent)
     print("  [+] Análisis de Dígitos...")
     digit_sc  = calc_digit_scores(recent)
+    print("  [+] Números consecutivos...")
+    consec_sc = calc_consecutive_bonus(recent)
+    print("  [+] Números consecutivos...")
+    consec_sc = calc_consecutive_bonus(recent)
     print("  [+] Anti-repetición...")
     penalty   = calc_anti_repeat_penalty(lottery)
 
@@ -441,11 +492,16 @@ def run_full_analysis(lottery: str) -> dict:
     n_monte   = normalize(monte)
     n_range   = normalize(range_sc)
     n_digit   = normalize(digit_sc)
+    n_consec  = normalize(consec_sc)
 
-    # Position: average of p1, p2, p3 scores per number
+    # p1 hardest to predict, weight p2/p3 more
     pos_avg = {}
     for n in ALL_NUMS:
-        pos_avg[n] = (pos_scores["p1"][n] + pos_scores["p2"][n] + pos_scores["p3"][n]) / 3
+        pos_avg[n] = (
+            0.25 * pos_scores["p1"][n] +
+            0.40 * pos_scores["p2"][n] +
+            0.35 * pos_scores["p3"][n]
+        )
     n_position = normalize(pos_avg)
 
     top2_markov = sorted(markov["markov_scores"], key=lambda x: markov["markov_scores"][x], reverse=True)[:2]
@@ -466,7 +522,8 @@ def run_full_analysis(lottery: str) -> dict:
             WEIGHTS["monte"]    * n_monte.get(num, 0)     +
             WEIGHTS["position"] * n_position.get(num, 0)  +
             WEIGHTS["range"]    * n_range.get(num, 0)     +
-            WEIGHTS["digit"]    * n_digit.get(num, 0)
+            WEIGHTS["digit"]    * n_digit.get(num, 0)      +
+            WEIGHTS["consec"]   * n_consec.get(num, 0)
         )
         # Apply anti-repetition penalty
         raw *= max(0.5, 1.0 - penalty.get(num, 0))
@@ -475,7 +532,7 @@ def run_full_analysis(lottery: str) -> dict:
     ranked = sorted(ALL_NUMS, key=lambda x: composite[x], reverse=True)
 
     picks = []
-    for rank, num in enumerate(ranked[:20], 1):
+    for rank, num in enumerate(ranked[:30], 1):
         picks.append({
             "rank":            rank,
             "num":             num,
@@ -491,6 +548,7 @@ def run_full_analysis(lottery: str) -> dict:
             "range_score":     round(n_range.get(num, 0) * 100, 2),
             "digit_score":     round(n_digit.get(num, 0) * 100, 2),
             "penalty":         round(penalty.get(num, 0), 2),
+            "consec_score":    round(n_consec.get(num, 0) * 100, 2),
         })
 
     freq_sorted = sorted(chi2["freq"].items(), key=lambda x: x[1], reverse=True)

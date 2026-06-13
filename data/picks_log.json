@@ -3040,6 +3040,31 @@
           "39"
         ]
       }
+    },
+    {
+      "id": "p_20260613_160136",
+      "date": "2026-06-13",
+      "lottery": "Nacional Noche",
+      "p1": "17",
+      "p2": "37",
+      "p3": "82",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 54.04,
+      "snapshot": {
+        "total_draws": 1890,
+        "recent_draws": 45,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 68,
+        "top5": [
+          "17",
+          "37",
+          "82",
+          "89",
+          "81"
+        ]
+      }
     }
   ]
 }

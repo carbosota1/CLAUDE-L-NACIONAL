@@ -3215,6 +3215,31 @@
           "70"
         ]
       }
+    },
+    {
+      "id": "p_20260617_120123",
+      "date": "2026-06-17",
+      "lottery": "Gana Más",
+      "p1": "20",
+      "p2": "13",
+      "p3": "49",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 47.89,
+      "snapshot": {
+        "total_draws": 1911,
+        "recent_draws": 45,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 82,
+        "top5": [
+          "20",
+          "13",
+          "49",
+          "28",
+          "64"
+        ]
+      }
     }
   ]
 }

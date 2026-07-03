@@ -212,7 +212,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--lottery", required=True, choices=["Gana Más", "Nacional Noche"])
     parser.add_argument("--no-telegram", action="store_true")
-    parser.add_argument("--force", action="store_true", help="Forzar generación aunque ya exista pick de hoy")
+    parser.add_argument("--force", action="store_true", help="Forzar pick aunque ya exista uno hoy")
+    parser.add_argument("--reset-today", action="store_true", help="Borra el pick de hoy y regenera desde cero")
     args = parser.parse_args()
 
     print(f"\n🚀 CLAUDE L-NACIONAL v2 — {args.lottery}")
@@ -222,7 +223,19 @@ def main():
     synced = sync_csv_from_json()
     print(f"  📋 CSV sincronizado: {synced} picks\n")
 
-    # ── 2. Check if already picked today ─────────────────────────────────────
+    # ── 2. Reset today's pick if requested ───────────────────────────────────
+    if args.reset_today:
+        picks  = load_picks()
+        today  = datetime.date.today().isoformat()
+        before = len(picks)
+        picks  = [p for p in picks if not (p.get("lottery") == args.lottery and p.get("date") == today)]
+        if len(picks) < before:
+            save_json(PICKS_FILE, {"picks": picks})
+            print(f"  🗑️  Pick de hoy eliminado ({before - len(picks)} registros). Regenerando...")
+        else:
+            print(f"  ℹ️  No había pick de hoy para eliminar.")
+
+    # ── 3. Check if already picked today ─────────────────────────────────────
     if already_picked_today(args.lottery):
         if args.force:
             # --force: resend existing pick to Telegram, do NOT regenerate

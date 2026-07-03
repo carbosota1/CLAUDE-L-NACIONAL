@@ -42,7 +42,7 @@ WEIGHTS = {
     "position":  0.07,
     "range":     0.08,
     "digit":     0.07,
-    "consec":    0.06,
+    "consec":    0.03,
 }
 
 PRIZE_MULTIPLIERS = {
@@ -382,10 +382,12 @@ def calc_consecutive_bonus(recent: list[dict]) -> dict[str, float]:
         for p in [d["p1"], d["p2"], d["p3"]]:
             freq[int(p)] += w
     scores = {}
+    avg_freq = sum(freq.values()) / len(freq) if freq else 1
+    cap = avg_freq * 2  # Cap at 2x average to prevent runaway clustering
     for num in ALL_NUMS:
         v = int(num)
         neighbor_score = sum(freq.get(v + delta, 0) for delta in range(-3, 4) if delta != 0)
-        scores[num] = neighbor_score
+        scores[num] = min(neighbor_score, cap)
     return scores
 
 
@@ -403,10 +405,12 @@ def calc_consecutive_bonus(recent: list[dict]) -> dict[str, float]:
         for p in [d["p1"], d["p2"], d["p3"]]:
             freq[int(p)] += w
     scores = {}
+    avg_freq = sum(freq.values()) / len(freq) if freq else 1
+    cap = avg_freq * 2  # Cap at 2x average to prevent runaway clustering
     for num in ALL_NUMS:
         v = int(num)
         neighbor_score = sum(freq.get(v + delta, 0) for delta in range(-3, 4) if delta != 0)
-        scores[num] = neighbor_score
+        scores[num] = min(neighbor_score, cap)
     return scores
 
 
@@ -531,6 +535,18 @@ def run_full_analysis(lottery: str) -> dict:
 
     ranked = sorted(ALL_NUMS, key=lambda x: composite[x], reverse=True)
 
+    # Apply diversity constraint: ensure top 5 picks are spread out (min ±8 apart)
+    diverse_top5 = []
+    for num in ranked:
+        if len(diverse_top5) >= 5:
+            break
+        too_close = any(abs(int(num) - int(picked)) < 8 for picked in diverse_top5)
+        if not too_close:
+            diverse_top5.append(num)
+    # Rebuild ranked with diverse top5 first, then rest
+    rest = [n for n in ranked if n not in diverse_top5]
+    ranked = diverse_top5 + rest
+
     picks = []
     for rank, num in enumerate(ranked[:30], 1):
         picks.append({
@@ -589,7 +605,14 @@ def calc_performance(lottery: str | None = None) -> dict:
         return {"total_picks": 0, "verified_picks": 0, "hits": 0,
                 "hit_rate": 0.0, "streak": 0, "roi": 0.0,
                 "total_invested": 0.0, "total_won": 0.0}
-    recent30  = verified[-30:]
+    # Exclude frozen period from hit rate calc
+    FROZEN_START = "2026-06-11"
+    FROZEN_END   = "2026-07-02"
+    valid_for_rate = [
+        p for p in verified
+        if not (FROZEN_START <= p.get("date","") <= FROZEN_END)
+    ] or verified
+    recent30  = valid_for_rate[-30:]
     # Count main hits (paid) and alt hits separately
     main_hits = sum(1 for p in recent30 if p.get("result") not in ("miss", "alt_hit", None, ""))
     alt_hits  = sum(1 for p in recent30 if p.get("result") == "alt_hit")
@@ -598,10 +621,20 @@ def calc_performance(lottery: str | None = None) -> dict:
     main_hit_rate = round(main_hits / len(recent30) * 100, 1) if recent30 else 0.0
     alt_hit_rate  = round(alt_hits  / len(recent30) * 100, 1) if recent30 else 0.0
 
-    # Streak: only counts main hits (paid results)
+    # Streak: exclude frozen period (2026-06-11 to 2026-07-02)
+    # These picks used stale data and shouldn't count against performance
+    FROZEN_START = "2026-06-11"
+    FROZEN_END   = "2026-07-02"
+    valid_verified = [
+        p for p in verified
+        if not (FROZEN_START <= p.get("date","") <= FROZEN_END)
+    ]
+    if not valid_verified:
+        valid_verified = verified  # fallback if all are in frozen period
+
     streak    = 0
-    first_win = verified[-1].get("result") not in ("miss", "alt_hit", None, "")
-    for p in reversed(verified):
+    first_win = valid_verified[-1].get("result") not in ("miss", "alt_hit", None, "")
+    for p in reversed(valid_verified):
         is_win = p.get("result") not in ("miss", "alt_hit", None, "")
         if is_win == first_win: streak += 1 if first_win else -1
         else: break

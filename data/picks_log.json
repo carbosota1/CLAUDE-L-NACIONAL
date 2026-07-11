@@ -4684,7 +4684,7 @@
       "p2": "23",
       "p3": "85",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 59.33,
       "snapshot": {
         "total_draws": 1912,
@@ -4699,7 +4699,22 @@
           "32",
           "42"
         ]
-      }
+      },
+      "result": "alt_hit",
+      "payout": 0.0,
+      "real_p1": "89",
+      "real_p2": "54",
+      "real_p3": "42",
+      "all_picks": [
+        "07",
+        "23",
+        "85",
+        "32",
+        "42"
+      ],
+      "alt_hit": true,
+      "alt_hit_num": "42",
+      "verified_at": "2026-07-11T16:01:37.869473"
     },
     {
       "id": "p_20260711_120138",
@@ -4723,6 +4738,31 @@
           "65",
           "79",
           "37"
+        ]
+      }
+    },
+    {
+      "id": "p_20260711_160139",
+      "date": "2026-07-11",
+      "lottery": "Nacional Noche",
+      "p1": "75",
+      "p2": "42",
+      "p3": "84",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 55.54,
+      "snapshot": {
+        "total_draws": 1913,
+        "recent_draws": 45,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 67,
+        "top5": [
+          "75",
+          "42",
+          "84",
+          "23",
+          "07"
         ]
       }
     }

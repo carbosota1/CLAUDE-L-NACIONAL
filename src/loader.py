@@ -187,9 +187,12 @@ def scrape_recent(lottery: str) -> list[dict]:
                 nums.append(str(int(t)).zfill(2))
 
         if len(nums) == 3:
+            # FIX: enloteria.com stores results with next day's date in the div ID
+            # Real draw date = date in ID minus 1 day
+            real_date = (datetime.date.fromisoformat(date_str) - datetime.timedelta(days=1)).isoformat()
             results.append({
-                "date":     date_str,
-                "day_name": DAYS_ES[datetime.date.fromisoformat(date_str).weekday()],
+                "date":     real_date,
+                "day_name": DAYS_ES[datetime.date.fromisoformat(real_date).weekday()],
                 "lottery":  lottery,
                 "p1": nums[0], "p2": nums[1], "p3": nums[2],
             })
@@ -257,8 +260,11 @@ def ensure_updated(lottery: str) -> list[dict]:
     today     = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
 
-    # Max date we accept for each lottery
-    max_date = yesterday if lottery == "Nacional Noche" else today
+    # Max date we accept AFTER the -1 day fix is applied:
+    # Since all scraped dates are shifted back 1 day automatically,
+    # we can scrape today for both lotteries — after the fix,
+    # "today" becomes "yesterday" which is the correct real draw date
+    max_date = today
 
     up_to_date = (last_date == max_date.isoformat())
     if up_to_date:

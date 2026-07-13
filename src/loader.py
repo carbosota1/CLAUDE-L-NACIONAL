@@ -143,9 +143,8 @@ def scrape_recent(lottery: str) -> list[dict]:
         if not m:
             continue
         try:
-            # Date in ID is 1 day ahead — subtract 1 day for real date
-            id_date  = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-            real_date = (id_date - datetime.timedelta(days=1)).isoformat()
+            # Date in ID is the CORRECT real draw date — use as-is
+            real_date = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
             datetime.date.fromisoformat(real_date)  # validate
         except ValueError:
             continue
@@ -217,19 +216,24 @@ def ensure_updated(lottery: str) -> list[dict]:
     So max_date = yesterday for both lotteries.
     """
     last_date = get_last_date(lottery)
+    today     = datetime.date.today().isoformat()
     yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
 
-    if last_date == yesterday:
+    # Gana Más result is available same day (2:30 PM, action runs at 4 PM)
+    # Nacional Noche result is available next day (9 PM, action runs at 4 PM next day)
+    max_date = today if lottery == "Gana Más" else yesterday
+
+    if last_date == max_date:
         print(f"  ✅ {lottery}: historial al día ({last_date})")
         return load_history(lottery)
 
-    print(f"  📥 {lottery}: último={last_date}, scrapeando hasta {yesterday}...")
+    print(f"  📥 {lottery}: último={last_date}, scrapeando hasta {max_date}...")
     scraped = scrape_recent(lottery)
 
     new_rows = [
         r for r in scraped
         if r["date"] > (last_date or "2000-01-01")
-        and r["date"] <= yesterday
+        and r["date"] <= max_date
     ]
 
     if new_rows:

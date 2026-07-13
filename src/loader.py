@@ -143,9 +143,19 @@ def extract_numbers(text: str) -> list[str]:
 
 def scrape_recent(lottery: str) -> list[dict]:
     """
-    Scrape the main page of enloteria.com for a lottery.
-    Returns all results visible on the page with their CORRECT dates
-    parsed from the page itself.
+    Scrape enloteria.com using CSS classes for reliable parsing.
+
+    HTML structure (confirmed from page source):
+      <span class="result-date">Domingo 12 de julio, 2026</span>
+      <div class="numbers" id="lottery_0_numbers_2026_07_12">
+        <div class="result-number">86</div>
+        <div class="result-number">79</div>
+        <div class="result-number">25</div>
+      </div>
+
+    The date in the span AND the date in the div ID are both correct.
+    We use the div ID as the primary date source (format: YYYY_MM_DD)
+    because it's machine-readable and unambiguous.
     """
     url  = SCRAPE_URLS[lottery]
     soup = fetch_page(url)
@@ -153,39 +163,38 @@ def scrape_recent(lottery: str) -> list[dict]:
         return []
 
     results = []
-    text    = soup.get_text(separator="\n")
-    lines   = [l.strip() for l in text.split("\n") if l.strip()]
 
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        # Look for date pattern like "Domingo 12 de julio, 2026"
-        date_found = parse_date_enloteria(line)
-        if date_found:
-            # Scan next lines for exactly 3 numbers (the result balls)
-            nums = []
-            j = i + 1
-            while j < min(i + 20, len(lines)) and len(nums) < 3:
-                candidate = extract_numbers(lines[j])
-                # Each ball is on its own line as a 1-2 digit number
-                if len(candidate) == 1:
-                    nums.append(candidate[0])
-                elif len(candidate) == 3 and not nums:
-                    # Sometimes all 3 on same line
-                    nums = candidate
-                    break
-                j += 1
+    # Find all numbers divs — ID format: lottery_N_numbers_YYYY_MM_DD
+    for numbers_div in soup.find_all("div", class_="numbers"):
+        div_id = numbers_div.get("id", "")
+        # Extract date from ID: lottery_0_numbers_2026_07_12
+        date_match = re.search(r"numbers_(\d{4})_(\d{2})_(\d{2})$", div_id)
+        if not date_match:
+            continue
+        try:
+            date_str = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
+            # Validate it's a real date
+            datetime.date.fromisoformat(date_str)
+        except ValueError:
+            continue
 
-            if len(nums) == 3:
-                results.append({
-                    "date":     date_found,
-                    "day_name": DAYS_ES[datetime.date.fromisoformat(date_found).weekday()],
-                    "lottery":  lottery,
-                    "p1": nums[0], "p2": nums[1], "p3": nums[2],
-                })
-        i += 1
+        # Extract the 3 numbers from result-number divs
+        num_divs = numbers_div.find_all("div", class_="result-number")
+        nums = []
+        for nd in num_divs:
+            t = nd.get_text(strip=True)
+            if re.match(r"^\d{1,2}$", t) and 0 <= int(t) <= 99:
+                nums.append(str(int(t)).zfill(2))
 
-    # Deduplicate by date (keep first occurrence)
+        if len(nums) == 3:
+            results.append({
+                "date":     date_str,
+                "day_name": DAYS_ES[datetime.date.fromisoformat(date_str).weekday()],
+                "lottery":  lottery,
+                "p1": nums[0], "p2": nums[1], "p3": nums[2],
+            })
+
+    # Deduplicate and sort
     seen = {}
     for r in results:
         if r["date"] not in seen:

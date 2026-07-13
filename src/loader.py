@@ -1,16 +1,17 @@
 """
-CLAUDE L-NACIONAL — Loader v4
+CLAUDE L-NACIONAL — Loader v5
 ==============================
-Fuente: enloteria.com (funciona en el runner de Gitea)
+Fuente: enloteria.com
   Gana Más:       /resultados-gana-mas
   Nacional Noche: /resultados-nacional-noche
 
-BUG FIX: El scraper anterior guardaba la fecha de la página
-en vez de la fecha que se pedía. Ahora:
-  - Gana Más: scrapes hasta HOY
-  - Nacional Noche: scrapes hasta AYER solamente
-    (el sorteo es a las 9 PM, si se corre a las 4 PM
-     el resultado aún no existe y se guarda el de ayer con fecha de hoy)
+FIXES:
+  1. Usa CSS class "numbers" div ID para fecha exacta
+     ID formato: lottery_N_numbers_YYYY_MM_DD
+  2. Resta 1 día a la fecha del ID (enloteria guarda con fecha del día siguiente)
+  3. max_date = ayer para ambas loterías (después del -1 día fix,
+     el resultado de "hoy" en el site = resultado real de ayer)
+  4. ensure_updated acepta lottery parameter para actualizar cualquier lotería
 """
 
 import datetime
@@ -44,9 +45,9 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 
-MONTHS_ES = {
-    "enero":1,"febrero":2,"marzo":3,"abril":4,"mayo":5,"junio":6,
-    "julio":7,"agosto":8,"septiembre":9,"octubre":10,"noviembre":11,"diciembre":12
+EXCEL_NAMES = {
+    "Gana Más":       "Loteria Nacional- Gana Más",
+    "Nacional Noche": "Loteria Nacional- Noche",
 }
 
 
@@ -113,49 +114,20 @@ def fetch_page(url: str, retries: int = 3) -> BeautifulSoup | None:
     return None
 
 
-def parse_date_enloteria(text: str) -> str | None:
-    """
-    Parse dates from enloteria.com format:
-    'Domingo 12 de julio, 2026' or 'Lunes 13 de julio, 2026'
-    Returns ISO date string YYYY-MM-DD or None.
-    """
-    m = re.search(
-        r"(\d{1,2})\s+de\s+(\w+)[,\s]+(\d{4})",
-        text, re.IGNORECASE
-    )
-    if m:
-        day   = int(m.group(1))
-        month = MONTHS_ES.get(m.group(2).lower().strip(), 0)
-        year  = int(m.group(3))
-        if month > 0:
-            try:
-                return datetime.date(year, month, day).isoformat()
-            except ValueError:
-                pass
-    return None
-
-
-def extract_numbers(text: str) -> list[str]:
-    """Extract 1-2 digit numbers from text, return zero-padded."""
-    nums = re.findall(r"\b(\d{1,2})\b", text)
-    return [str(int(n)).zfill(2) for n in nums if 0 <= int(n) <= 99]
-
-
 def scrape_recent(lottery: str) -> list[dict]:
     """
-    Scrape enloteria.com using CSS classes for reliable parsing.
+    Parse enloteria.com using CSS classes.
 
-    HTML structure (confirmed from page source):
-      <span class="result-date">Domingo 12 de julio, 2026</span>
+    HTML structure confirmed:
       <div class="numbers" id="lottery_0_numbers_2026_07_12">
         <div class="result-number">86</div>
         <div class="result-number">79</div>
         <div class="result-number">25</div>
       </div>
 
-    The date in the span AND the date in the div ID are both correct.
-    We use the div ID as the primary date source (format: YYYY_MM_DD)
-    because it's machine-readable and unambiguous.
+    The date in the div ID is 1 day AHEAD of the real draw date.
+    Example: ID says 2026_07_12 → real draw was 2026-07-11
+    Fix: subtract 1 day from the ID date.
     """
     url  = SCRAPE_URLS[lottery]
     soup = fetch_page(url)
@@ -164,21 +136,21 @@ def scrape_recent(lottery: str) -> list[dict]:
 
     results = []
 
-    # Find all numbers divs — ID format: lottery_N_numbers_YYYY_MM_DD
     for numbers_div in soup.find_all("div", class_="numbers"):
         div_id = numbers_div.get("id", "")
-        # Extract date from ID: lottery_0_numbers_2026_07_12
-        date_match = re.search(r"numbers_(\d{4})_(\d{2})_(\d{2})$", div_id)
-        if not date_match:
+        # Extract date from ID: lottery_N_numbers_YYYY_MM_DD
+        m = re.search(r"numbers_(\d{4})_(\d{2})_(\d{2})$", div_id)
+        if not m:
             continue
         try:
-            date_str = f"{date_match.group(1)}-{date_match.group(2)}-{date_match.group(3)}"
-            # Validate it's a real date
-            datetime.date.fromisoformat(date_str)
+            # Date in ID is 1 day ahead — subtract 1 day for real date
+            id_date  = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            real_date = (id_date - datetime.timedelta(days=1)).isoformat()
+            datetime.date.fromisoformat(real_date)  # validate
         except ValueError:
             continue
 
-        # Extract the 3 numbers from result-number divs
+        # Extract numbers from result-number divs
         num_divs = numbers_div.find_all("div", class_="result-number")
         nums = []
         for nd in num_divs:
@@ -187,9 +159,6 @@ def scrape_recent(lottery: str) -> list[dict]:
                 nums.append(str(int(t)).zfill(2))
 
         if len(nums) == 3:
-            # FIX: enloteria.com stores results with next day's date in the div ID
-            # Real draw date = date in ID minus 1 day
-            real_date = (datetime.date.fromisoformat(date_str) - datetime.timedelta(days=1)).isoformat()
             results.append({
                 "date":     real_date,
                 "day_name": DAYS_ES[datetime.date.fromisoformat(real_date).weekday()],
@@ -197,7 +166,7 @@ def scrape_recent(lottery: str) -> list[dict]:
                 "p1": nums[0], "p2": nums[1], "p3": nums[2],
             })
 
-    # Deduplicate and sort
+    # Deduplicate by date
     seen = {}
     for r in results:
         if r["date"] not in seen:
@@ -208,7 +177,6 @@ def scrape_recent(lottery: str) -> list[dict]:
 def append_to_excel(new_rows: list[dict]) -> int:
     if not new_rows:
         return 0
-
     wb = openpyxl.load_workbook(HISTORY_FILE)
     ws = wb.active
 
@@ -221,11 +189,6 @@ def append_to_excel(new_rows: list[dict]) -> int:
             fecha = str(row[0]).strip()
         canonical = LOTTERY_CANONICAL.get(str(row[1]).strip(), str(row[1]).strip())
         existing.add((fecha, canonical))
-
-    EXCEL_NAMES = {
-        "Gana Más":       "Loteria Nacional- Gana Más",
-        "Nacional Noche": "Loteria Nacional- Noche",
-    }
 
     added = 0
     for r in sorted(new_rows, key=lambda x: x["date"]):
@@ -241,53 +204,39 @@ def append_to_excel(new_rows: list[dict]) -> int:
         print(f"  ✅ {added} nuevos resultados guardados en history.xlsx")
     else:
         print(f"  ℹ️  Sin cambios en history.xlsx")
-
     wb.close()
     return added
 
 
 def ensure_updated(lottery: str) -> list[dict]:
     """
-    Update cycle:
-    1. Check last date in Excel
-    2. Scrape enloteria.com — uses dates FROM THE PAGE (not today's date)
-    3. Filter: Nacional Noche only accepts results up to YESTERDAY
-       (prevents saving yesterday's result with today's date)
-    4. Append new results to Excel
-    5. Return full draw list
+    Update the history for a given lottery.
+
+    After the -1 day fix, the most recent result we can get from the site
+    is always YESTERDAY (the site shows today's date but it's really yesterday).
+    So max_date = yesterday for both lotteries.
     """
     last_date = get_last_date(lottery)
-    today     = datetime.date.today()
-    yesterday = today - datetime.timedelta(days=1)
+    yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
 
-    # Max date we accept AFTER the -1 day fix is applied:
-    # Since all scraped dates are shifted back 1 day automatically,
-    # we can scrape today for both lotteries — after the fix,
-    # "today" becomes "yesterday" which is the correct real draw date
-    max_date = today
-
-    up_to_date = (last_date == max_date.isoformat())
-    if up_to_date:
+    if last_date == yesterday:
         print(f"  ✅ {lottery}: historial al día ({last_date})")
         return load_history(lottery)
 
-    print(f"  📥 {lottery}: último={last_date}, scrapeando hasta {max_date}...")
-
+    print(f"  📥 {lottery}: último={last_date}, scrapeando hasta {yesterday}...")
     scraped = scrape_recent(lottery)
 
-    # CRITICAL FIX: only accept results within valid date range
-    # and newer than what we already have
     new_rows = [
         r for r in scraped
         if r["date"] > (last_date or "2000-01-01")
-        and r["date"] <= max_date.isoformat()
+        and r["date"] <= yesterday
     ]
 
     if new_rows:
         for r in new_rows:
-            print(f"    ✅ {r['date']}: {r['p1']}-{r['p2']}-{r['p3']}")
+            print(f"    ✅ {r['date']} [{lottery}]: {r['p1']}-{r['p2']}-{r['p3']}")
         append_to_excel(new_rows)
     else:
-        print(f"  ⚠️  No se encontraron resultados nuevos")
+        print(f"  ⚠️  No se encontraron resultados nuevos para {lottery}")
 
     return load_history(lottery)

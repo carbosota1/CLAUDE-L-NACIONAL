@@ -1,5 +1,5 @@
 """
-CLAUDE L-NACIONAL — Loader v5
+CLAUDE L-NACIONAL — Loader v5.1
 ==============================
 Fuente: enloteria.com
   Gana Más:       /resultados-gana-mas
@@ -8,10 +8,24 @@ Fuente: enloteria.com
 FIXES:
   1. Usa CSS class "numbers" div ID para fecha exacta
      ID formato: lottery_N_numbers_YYYY_MM_DD
-  2. Resta 1 día a la fecha del ID (enloteria guarda con fecha del día siguiente)
-  3. max_date = ayer para ambas loterías (después del -1 día fix,
-     el resultado de "hoy" en el site = resultado real de ayer)
+  2. La fecha del ID es la fecha REAL del sorteo — se usa TAL CUAL, sin offset.
+     (Verificado 1:1 contra enloteria.com para GM y NN, 15 jun–13 jul 2026:
+      cero desfases. La instrucción vieja de "restar 1 día" quedó de una
+      versión anterior del sitio/scraper y ya NO aplica — se removió del
+      docstring en v5.1 porque contradecía el código real y generaba
+      confusión. Si enloteria.com vuelve a cambiar su formato de fecha,
+      re-verificar contra el sitio antes de reintroducir cualquier offset.)
+  3. max_date = ayer para Nacional Noche (el sorteo es a las 9 PM —o 6 PM
+     los domingos— y el action corre a las 4 PM, antes del sorteo de hoy).
+     max_date = hoy para Gana Más (sorteo 2:30 PM, action corre después).
   4. ensure_updated acepta lottery parameter para actualizar cualquier lotería
+
+NOTA HISTÓRICA (jul 2026): la fila 2026-07-01 Gana Más (86-74-00) fue
+borrada en algún momento por parecer "mala". Se confirmó contra el sitio
+que SÍ es el resultado real y correcto — probablemente se guardó en su
+momento bajo la fecha equivocada (con el offset viejo) y se borró por
+error en vez de corregirle la fecha. Ver audit_history.py para detectar
+este tipo de fila corrupta automáticamente.
 """
 
 import datetime
@@ -125,9 +139,10 @@ def scrape_recent(lottery: str) -> list[dict]:
         <div class="result-number">25</div>
       </div>
 
-    The date in the div ID is 1 day AHEAD of the real draw date.
-    Example: ID says 2026_07_12 → real draw was 2026-07-11
-    Fix: subtract 1 day from the ID date.
+    The date in the div ID is the CORRECT real draw date — used as-is.
+    Verified 1:1 against the site's own displayed calendar labels for GM
+    and NN across 15 jun–13 jul 2026 with zero mismatches. Do not
+    reintroduce a +/-1 day offset without re-verifying against the site.
     """
     url  = SCRAPE_URLS[lottery]
     soup = fetch_page(url)
@@ -211,16 +226,16 @@ def ensure_updated(lottery: str) -> list[dict]:
     """
     Update the history for a given lottery.
 
-    After the -1 day fix, the most recent result we can get from the site
-    is always YESTERDAY (the site shows today's date but it's really yesterday).
-    So max_date = yesterday for both lotteries.
+    Gana Más: draws 2:30 PM, workflow runs 4 PM RD -> today's result is
+    already out, so max_date = today.
+
+    Nacional Noche: draws 9 PM (6 PM Sundays), workflow runs 4 PM RD ->
+    today's result is NOT out yet, so max_date = yesterday.
     """
     last_date = get_last_date(lottery)
     today     = datetime.date.today().isoformat()
     yesterday = (datetime.date.today() - datetime.timedelta(days=1)).isoformat()
 
-    # Gana Más result is available same day (2:30 PM, action runs at 4 PM)
-    # Nacional Noche result is available next day (9 PM, action runs at 4 PM next day)
     max_date = today if lottery == "Gana Más" else yesterday
 
     if last_date == max_date:

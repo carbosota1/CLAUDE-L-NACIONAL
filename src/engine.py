@@ -49,7 +49,10 @@ ALL_NUMS  = [str(i).zfill(2) for i in range(100)]
 NUM_IDX   = {n: i for i, n in enumerate(ALL_NUMS)}
 DATA_DIR  = Path(__file__).parent.parent / "data"
 HALF_LIFE = 10   # Further reduced: last 2 weeks dominate
-MARKOV_SMOOTHING_ALPHA = 3.0  # pseudo-count added to every transition cell before row-normalizing
+MARKOV_SMOOTHING_ALPHA = 1.5  # pseudo-count added DIRECTLY to every transition cell (per-cell, not /100)
+                               # sized to match real per-cell counts at ~2,000-draw history scale — re-tune
+                               # upward as history grows past several thousand draws, or the smoothing will
+                               # under-shrink again relative to the (larger) real per-cell counts.
 
 # Updated weights (rebalanced v2.1 — sum to 1.00 exactly)
 WEIGHTS = {
@@ -262,8 +265,17 @@ def calc_markov(draws: list[dict]) -> dict:
     # Laplace smoothing: add a pseudo-count to every cell before normalizing.
     # Rows with few real observations get pulled toward the uniform
     # distribution instead of letting 1-2 extra counts look like a strong signal.
-    T1 += MARKOV_SMOOTHING_ALPHA / 100
-    T2 += MARKOV_SMOOTHING_ALPHA / 100
+    #
+    # v2.2 fix: ALPHA is now added directly per cell (NOT divided by 100).
+    # With ~1,958 draws real average per-cell count is ~1.7-1.8 (total
+    # transition observations / 10,000 cells) -- dividing ALPHA=3 by 100
+    # made it 0.03/cell, i.e. noise-on-noise that barely moved anything
+    # (confirmed: Markov match stayed at 87% in production). ALPHA=1.5
+    # added directly is comparable in magnitude to the real per-cell counts
+    # at this dataset size, so it meaningfully shrinks sparse/lucky cells
+    # toward uniform without erasing genuine signal from well-observed ones.
+    T1 += MARKOV_SMOOTHING_ALPHA
+    T2 += MARKOV_SMOOTHING_ALPHA
 
     def row_norm(M):
         rs = M.sum(axis=1, keepdims=True); rs[rs==0] = 1; return M / rs

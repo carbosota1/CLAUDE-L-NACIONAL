@@ -1,5 +1,5 @@
 """
-CLAUDE L-NACIONAL — Motor de Análisis Estadístico v2
+CLAUDE L-NACIONAL — Motor de Análisis Estadístico v2.1
 =====================================================
 Mejoras vs v1:
   - Análisis por POSICIÓN separado (1ra, 2da, 3ra independientes)
@@ -9,6 +9,26 @@ Mejoras vs v1:
   - Análisis de DÍGITOS (decena y unidad)
   - Overdue reducido 10%→5%, Markov aumentado 15%→20%
   - WMA half-life reducido 30→15 (más peso a datos recientes)
+
+CHANGELOG v2.1:
+  - calc_markov(): agregado suavizado Laplace (ALPHA pseudo-conteos) a las
+    matrices de transición ANTES de normalizar por fila. Con ~3-4 sorteos
+    de historial, cada celda de la matriz 100x100 tiene en promedio ~1-3
+    observaciones — sin suavizado, una celda con 2 conteos en vez de 1 se
+    ve como "señal fuerte" tras normalizar, cuando es indistinguible del
+    ruido. El suavizado acerca las filas con pocas observaciones a la
+    probabilidad uniforme, sin borrar la señal de las filas con más datos.
+  - WEIGHTS rebalanceados: Markov 20%→12% (estaba sobreponderando una señal
+    ruidosa), y esos puntos + el 3% que faltaba para sumar 1.0 (antes
+    sumaban 0.97) se repartieron hacia Bayesiano (7%→10%, ya tiene su
+    propio suavizado Dirichlet), Posición (7%→13%, mucha más muestra por
+    celda que Markov) y Chi² (9%→11%, test de significancia real).
+  - calc_anti_repeat_penalty(): YA NO penaliza picks con status=="pending".
+    Antes, cualquier número en un pick todavía sin verificar recibía
+    penalización como si hubiera fallado — información falsa alimentando
+    al modelo. Ahora solo penaliza picks con status=="verified" Y
+    result=="miss" confirmado.
+  - Eliminada la definición y llamada duplicada de calc_consecutive_bonus().
 """
 
 import json
@@ -22,24 +42,27 @@ import numpy as np
 from scipy import stats
 from sklearn.metrics import mutual_info_score
 
+from loader import load_history
+
 # ── Constants ────────────────────────────────────────────────────────────────
 ALL_NUMS  = [str(i).zfill(2) for i in range(100)]
 NUM_IDX   = {n: i for i, n in enumerate(ALL_NUMS)}
 DATA_DIR  = Path(__file__).parent.parent / "data"
 HALF_LIFE = 10   # Further reduced: last 2 weeks dominate
+MARKOV_SMOOTHING_ALPHA = 3.0  # pseudo-count added to every transition cell before row-normalizing
 
-# Updated weights
+# Updated weights (rebalanced v2.1 — sum to 1.00 exactly)
 WEIGHTS = {
     "rating":    0.08,
     "overdue":   0.03,
     "cooccur":   0.07,
     "sum":       0.04,
-    "chi2":      0.09,
+    "chi2":      0.11,
     "mi":        0.10,
-    "markov":    0.20,
-    "bayes":     0.07,
+    "markov":    0.12,
+    "bayes":     0.10,
     "monte":     0.04,
-    "position":  0.07,
+    "position":  0.13,
     "range":     0.08,
     "digit":     0.07,
     "consec":    0.03,
@@ -74,9 +97,15 @@ def save_json(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2, cls=_NumpyEncoder), encoding="utf-8")
 
 def get_draws(lottery: str) -> list[dict]:
-    data = load_json(DATA_DIR / "history.json")
-    draws = [d for d in data.get("history", []) if d["lottery"] == lottery]
-    return sorted(draws, key=lambda x: x["date"])
+    """
+    v2.1: lee directo de history.xlsx vía loader.load_history() — misma
+    fuente de datos que usa el resto del sistema (loader.py, sync_history.py).
+    Antes leía de un history.json separado que nada en el pipeline
+    mantenía actualizado; funcionaba solo porque generate_picks.py
+    sobreescribía esta función en tiempo de ejecución. Ya no hace falta
+    ese parche — ver generate_picks.py v2.2.
+    """
+    return load_history(lottery)
 
 
 # ── WMA ───────────────────────────────────────────────────────────────────────
@@ -217,7 +246,7 @@ def calc_mutual_info(draws: list[dict]) -> dict:
     return {"mi_scores": mi_scores, "mi_level": mi_level, "avg_mi": avg_mi, "mi_global": float(mi_global)}
 
 
-# ── Method 7: Markov Chain ────────────────────────────────────────────────────
+# ── Method 7: Markov Chain (con suavizado Laplace) ────────────────────────────
 def calc_markov(draws: list[dict]) -> dict:
     T1 = np.zeros((100, 100))
     T2 = np.zeros((100, 100))
@@ -229,6 +258,13 @@ def calc_markov(draws: list[dict]) -> dict:
         for c in [draws[i]["p1"], draws[i]["p2"], draws[i]["p3"]]:
             for n in [draws[i+2]["p1"], draws[i+2]["p2"], draws[i+2]["p3"]]:
                 T2[NUM_IDX[c], NUM_IDX[n]] += 1
+
+    # Laplace smoothing: add a pseudo-count to every cell before normalizing.
+    # Rows with few real observations get pulled toward the uniform
+    # distribution instead of letting 1-2 extra counts look like a strong signal.
+    T1 += MARKOV_SMOOTHING_ALPHA / 100
+    T2 += MARKOV_SMOOTHING_ALPHA / 100
+
     def row_norm(M):
         rs = M.sum(axis=1, keepdims=True); rs[rs==0] = 1; return M / rs
     P = (row_norm(T1) + row_norm(T2)) / 2
@@ -368,7 +404,7 @@ def calc_digit_scores(recent: list[dict]) -> dict[str, float]:
     return scores
 
 
-# ── NEW: Consecutive Number Bonus ────────────────────────────────────────────
+# ── Consecutive Number Bonus ─────────────────────────────────────────────────
 def calc_consecutive_bonus(recent: list[dict]) -> dict[str, float]:
     """
     36% of real results have numbers within ±2 of each other.
@@ -391,34 +427,16 @@ def calc_consecutive_bonus(recent: list[dict]) -> dict[str, float]:
     return scores
 
 
-# ── NEW: Consecutive Number Bonus ────────────────────────────────────────────
-def calc_consecutive_bonus(recent: list[dict]) -> dict[str, float]:
-    """
-    36% of real results have numbers within ±2 of each other.
-    Boost numbers close to frequently occurring recent numbers.
-    """
-    last14 = recent[-14:] if len(recent) >= 14 else recent
-    freq = defaultdict(float)
-    n = len(last14)
-    for idx, d in enumerate(last14):
-        w = math.exp(-(n - 1 - idx) / 7)
-        for p in [d["p1"], d["p2"], d["p3"]]:
-            freq[int(p)] += w
-    scores = {}
-    avg_freq = sum(freq.values()) / len(freq) if freq else 1
-    cap = avg_freq * 2  # Cap at 2x average to prevent runaway clustering
-    for num in ALL_NUMS:
-        v = int(num)
-        neighbor_score = sum(freq.get(v + delta, 0) for delta in range(-3, 4) if delta != 0)
-        scores[num] = min(neighbor_score, cap)
-    return scores
-
-
-# ── NEW: Anti-repetition Penalty ─────────────────────────────────────────────
+# ── Anti-repetition Penalty ────────────────────────────────────────────────────
 def calc_anti_repeat_penalty(lottery: str) -> dict[str, float]:
     """
-    Load the last 3 picks for this lottery from picks_log.json.
-    Numbers that have been recommended and missed get a penalty.
+    Load the last 3 VERIFIED picks for this lottery from picks_log.json.
+    Numbers that were recommended and CONFIRMED to miss get a penalty.
+
+    v2.1: no longer penalizes picks with status=="pending" — a pick that
+    hasn't been verified yet is not a known miss, and penalizing it fed
+    the model false information (this also interacted badly with the old
+    auto_verify_last_pick bug, which left picks pending for months).
     """
     penalty = {n: 0.0 for n in ALL_NUMS}
     picks_file = DATA_DIR / "picks_log.json"
@@ -426,10 +444,11 @@ def calc_anti_repeat_penalty(lottery: str) -> dict[str, float]:
         return penalty
     data  = load_json(picks_file)
     picks = [p for p in data.get("picks", []) if p.get("lottery") == lottery]
-    # Last 3 picks that were misses
-    recent_picks = picks[-3:]
+    # Last 3 picks that were CONFIRMED misses (verified only)
+    verified_picks = [p for p in picks if p.get("status") == "verified"]
+    recent_picks = verified_picks[-3:]
     for p in recent_picks:
-        if p.get("result") == "miss" or p.get("status") == "pending":
+        if p.get("result") == "miss":
             for num in [p.get("p1",""), p.get("p2",""), p.get("p3","")]:
                 if num in penalty:
                     penalty[num] += 0.33  # accumulate penalty
@@ -466,7 +485,7 @@ def run_full_analysis(lottery: str) -> dict:
     chi2      = calc_chi2(draws)
     print("  [6/9] Mutual Information...")
     mi        = calc_mutual_info(draws)
-    print("  [7/9] Markov Chain...")
+    print("  [7/9] Markov Chain (suavizado)...")
     markov    = calc_markov(draws)
     print("  [8/9] Bayesiano...")
     bayes     = calc_bayesian(draws)
@@ -478,8 +497,6 @@ def run_full_analysis(lottery: str) -> dict:
     range_sc  = calc_range_scores(recent)
     print("  [+] Análisis de Dígitos...")
     digit_sc  = calc_digit_scores(recent)
-    print("  [+] Números consecutivos...")
-    consec_sc = calc_consecutive_bonus(recent)
     print("  [+] Números consecutivos...")
     consec_sc = calc_consecutive_bonus(recent)
     print("  [+] Anti-repetición...")

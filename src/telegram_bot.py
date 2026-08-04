@@ -94,7 +94,7 @@ Racha actual:  <b>{"+"+str(streak) if streak > 0 else str(streak)}</b> {streak_e
 ROI estimado:  <b>{roi_sign}{roi}%</b>
 ━━━━━━━━━━━━━━━━━━━━━
 ⚠️ <i>Solo para análisis estadístico</i>
-🤖 <i>CLAUDE L-NACIONAL v1.0</i>"""
+🤖 <i>CLAUDE L-NACIONAL v2.0</i>"""
 
     return msg
 
@@ -145,7 +145,7 @@ Hit rate:  <b>{performance.get('hit_rate', 0)}%</b>
 Racha:     <b>{performance.get('streak', 0)}</b>
 ROI:       <b>{performance.get('roi', 0)}%</b>
 ━━━━━━━━━━━━━━━━━━━━━
-🤖 <i>CLAUDE L-NACIONAL v1.0</i>"""
+🤖 <i>CLAUDE L-NACIONAL v2.0</i>"""
 
     result_api = send_message(token, chat_id, msg)
     return result_api.get("ok", False)

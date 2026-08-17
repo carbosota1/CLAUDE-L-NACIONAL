@@ -7820,6 +7820,31 @@
           "40"
         ]
       }
+    },
+    {
+      "id": "p_20260817_160102",
+      "date": "2026-08-17",
+      "lottery": "Nacional Noche",
+      "p1": "36",
+      "p2": "93",
+      "p3": "84",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 51.32,
+      "snapshot": {
+        "total_draws": 1938,
+        "recent_draws": 45,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 44,
+        "top5": [
+          "36",
+          "93",
+          "84",
+          "28",
+          "46"
+        ]
+      }
     }
   ]
 }

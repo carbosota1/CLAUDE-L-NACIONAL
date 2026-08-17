@@ -7795,6 +7795,31 @@
           "46"
         ]
       }
+    },
+    {
+      "id": "p_20260817_120104",
+      "date": "2026-08-17",
+      "lottery": "Gana Más",
+      "p1": "88",
+      "p2": "13",
+      "p3": "51",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 52.57,
+      "snapshot": {
+        "total_draws": 1970,
+        "recent_draws": 45,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 40,
+        "top5": [
+          "88",
+          "13",
+          "51",
+          "04",
+          "40"
+        ]
+      }
     }
   ]
 }

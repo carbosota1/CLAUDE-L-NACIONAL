@@ -13,15 +13,15 @@
   "by_method": {},
   "by_lottery": {
     "Gana Más": {
-      "total_picks": 110,
-      "verified_picks": 91,
+      "total_picks": 111,
+      "verified_picks": 92,
       "hits": 0,
       "alt_hits": 1,
       "total_hits": 1,
       "hit_rate": 3.3,
       "main_hit_rate": 0.0,
       "alt_hit_rate": 3.3,
-      "streak": -44,
+      "streak": -45,
       "roi": 0.0,
       "total_invested": 0.0,
       "total_won": 0.0
@@ -42,5 +42,5 @@
     }
   },
   "log": [],
-  "last_updated": "2026-08-18T16:01:05.306455"
+  "last_updated": "2026-08-19T12:01:04.833922"
 }

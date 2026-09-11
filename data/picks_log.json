@@ -8,7 +8,7 @@
       "p2": "59",
       "p3": "24",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 56.85,
       "amount": "",
       "analysis_snapshot": {
@@ -23,7 +23,21 @@
           "54",
           "81"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "84",
+      "real_p2": "65",
+      "real_p3": "36",
+      "all_picks": [
+        "78",
+        "59",
+        "24"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.382459"
     },
     {
       "id": "p_20260501_035729",
@@ -33,7 +47,7 @@
       "p2": "46",
       "p3": "20",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 59.9,
       "snapshot": {
         "total_draws": 1869,
@@ -47,7 +61,23 @@
           "64",
           "06"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "84",
+      "real_p2": "65",
+      "real_p3": "36",
+      "all_picks": [
+        "23",
+        "46",
+        "20",
+        "64",
+        "06"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.382552"
     },
     {
       "id": "p_20260501_040529",
@@ -57,7 +87,7 @@
       "p2": "46",
       "p3": "20",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 59.9,
       "snapshot": {
         "total_draws": 1869,
@@ -71,7 +101,23 @@
           "64",
           "06"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "84",
+      "real_p2": "65",
+      "real_p3": "36",
+      "all_picks": [
+        "23",
+        "46",
+        "20",
+        "64",
+        "06"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.382609"
     },
     {
       "id": "p_20260501_041049",
@@ -81,7 +127,7 @@
       "p2": "46",
       "p3": "20",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 59.9,
       "snapshot": {
         "total_draws": 1869,
@@ -95,7 +141,23 @@
           "64",
           "06"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "84",
+      "real_p2": "65",
+      "real_p3": "36",
+      "all_picks": [
+        "23",
+        "46",
+        "20",
+        "64",
+        "06"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.382672"
     },
     {
       "id": "p_20260501_164501",
@@ -105,7 +167,7 @@
       "p2": "46",
       "p3": "20",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 59.9,
       "snapshot": {
         "total_draws": 1869,
@@ -119,7 +181,23 @@
           "64",
           "06"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "84",
+      "real_p2": "65",
+      "real_p3": "36",
+      "all_picks": [
+        "23",
+        "46",
+        "20",
+        "64",
+        "06"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.382755"
     },
     {
       "id": "p_20260501_164504",
@@ -201,7 +279,7 @@
       "p2": "60",
       "p3": "65",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 61.96,
       "snapshot": {
         "total_draws": 1870,
@@ -215,7 +293,23 @@
           "37",
           "23"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "20",
+      "real_p2": "97",
+      "real_p3": "20",
+      "all_picks": [
+        "64",
+        "60",
+        "65",
+        "37",
+        "23"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.382855"
     },
     {
       "id": "p_20260502_202900",
@@ -249,7 +343,7 @@
       "p2": "40",
       "p3": "29",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 63.34,
       "snapshot": {
         "total_draws": 1871,
@@ -263,7 +357,23 @@
           "64",
           "46"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "36",
+      "real_p2": "59",
+      "real_p3": "21",
+      "all_picks": [
+        "20",
+        "40",
+        "29",
+        "64",
+        "46"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.382950"
     },
     {
       "id": "p_20260503_202953",
@@ -297,7 +407,7 @@
       "p2": "23",
       "p3": "01",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 65.8,
       "snapshot": {
         "total_draws": 1872,
@@ -311,7 +421,23 @@
           "36",
           "64"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "76",
+      "real_p2": "62",
+      "real_p3": "19",
+      "all_picks": [
+        "20",
+        "23",
+        "01",
+        "36",
+        "64"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.383054"
     },
     {
       "id": "p_20260504_205603",
@@ -405,7 +531,7 @@
       "p2": "68",
       "p3": "76",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 51.5,
       "snapshot": {
         "total_draws": 1874,
@@ -420,7 +546,23 @@
           "36",
           "19"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "74",
+      "real_p2": "65",
+      "real_p3": "02",
+      "all_picks": [
+        "34",
+        "68",
+        "76",
+        "36",
+        "19"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.383151"
     },
     {
       "id": "p_20260506_045542",
@@ -3274,7 +3416,7 @@
       "p2": "39",
       "p3": "37",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 45.13,
       "snapshot": {
         "total_draws": 1911,
@@ -3289,7 +3431,23 @@
           "28",
           "64"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "97",
+      "real_p2": "79",
+      "real_p3": "15",
+      "all_picks": [
+        "32",
+        "39",
+        "37",
+        "28",
+        "64"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.383262"
     },
     {
       "id": "p_20260618_160125",
@@ -3324,7 +3482,7 @@
       "p2": "94",
       "p3": "27",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 54.27,
       "snapshot": {
         "total_draws": 1911,
@@ -3339,7 +3497,23 @@
           "28",
           "64"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "87",
+      "real_p2": "30",
+      "real_p3": "86",
+      "all_picks": [
+        "31",
+        "94",
+        "27",
+        "28",
+        "64"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.383354"
     },
     {
       "id": "p_20260619_160101",
@@ -3374,7 +3548,7 @@
       "p2": "40",
       "p3": "41",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 58.76,
       "snapshot": {
         "total_draws": 1911,
@@ -3389,7 +3563,23 @@
           "28",
           "64"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "99",
+      "real_p2": "53",
+      "real_p3": "10",
+      "all_picks": [
+        "45",
+        "40",
+        "41",
+        "28",
+        "64"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-11T14:09:01.383442"
     },
     {
       "id": "p_20260620_160100",
@@ -9502,7 +9692,7 @@
       }
     },
     {
-      "id": "p_20260911_120230",
+      "id": "p_20260911_140914",
       "date": "2026-09-11",
       "lottery": "Gana Más",
       "p1": "31",

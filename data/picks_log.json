@@ -10909,6 +10909,31 @@
           "37"
         ]
       }
+    },
+    {
+      "id": "p_20260925_160144",
+      "date": "2026-09-25",
+      "lottery": "Gana Más",
+      "p1": "12",
+      "p2": "22",
+      "p3": "60",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 56.49,
+      "snapshot": {
+        "total_draws": 2008,
+        "recent_draws": 45,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 39,
+        "top5": [
+          "12",
+          "22",
+          "60",
+          "42",
+          "01"
+        ]
+      }
     }
   ]
 }

@@ -10934,6 +10934,31 @@
           "01"
         ]
       }
+    },
+    {
+      "id": "p_20260925_200146",
+      "date": "2026-09-25",
+      "lottery": "Nacional Noche",
+      "p1": "17",
+      "p2": "03",
+      "p3": "79",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 54.94,
+      "snapshot": {
+        "total_draws": 1976,
+        "recent_draws": 45,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 48,
+        "top5": [
+          "17",
+          "03",
+          "79",
+          "99",
+          "37"
+        ]
+      }
     }
   ]
 }

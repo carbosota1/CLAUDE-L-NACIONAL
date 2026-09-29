@@ -11123,7 +11123,7 @@
       "p2": "43",
       "p3": "20",
       "method": "Sistema",
-      "status": "pending",
+      "status": "verified",
       "score": 54.17,
       "snapshot": {
         "total_draws": 2011,
@@ -11138,7 +11138,23 @@
           "73",
           "62"
         ]
-      }
+      },
+      "result": "miss",
+      "payout": 0.0,
+      "real_p1": "85",
+      "real_p2": "27",
+      "real_p3": "60",
+      "all_picks": [
+        "05",
+        "43",
+        "20",
+        "73",
+        "62"
+      ],
+      "alt_hit": false,
+      "alt_hit_num": "",
+      "alt_hit_rank": null,
+      "verified_at": "2026-09-29T16:02:15.292002"
     },
     {
       "id": "p_20260928_213238",
@@ -11162,6 +11178,31 @@
           "90",
           "00",
           "50"
+        ]
+      }
+    },
+    {
+      "id": "p_20260929_160219",
+      "date": "2026-09-29",
+      "lottery": "Gana Más",
+      "p1": "85",
+      "p2": "15",
+      "p3": "25",
+      "method": "Sistema",
+      "status": "pending",
+      "score": 54.74,
+      "snapshot": {
+        "total_draws": 2012,
+        "recent_draws": 45,
+        "chi2_significant": false,
+        "mi_level": "Baja",
+        "markov_confidence": 47,
+        "top5": [
+          "85",
+          "15",
+          "25",
+          "01",
+          "39"
         ]
       }
     }

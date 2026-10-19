@@ -63,10 +63,18 @@ jobs:
        run: |
          git config user.name  "CLAUDE L-NACIONAL Bot"
          git config user.email "bot@claude-l-nacional"
-         git pull --rebase origin main
+         for i in 1 2 3; do
+           git pull --rebase origin main && break
+           echo "git pull falló (intento $i/3), reintentando..."; sleep 5
+         done
 
      - name: 📦 Instalar dependencias
-       run: pip install -r requirements.txt --break-system-packages
+       run: |
+         for i in 1 2 3 4 5; do
+           pip install -r requirements.txt --break-system-packages && break
+           echo "pip falló (intento $i/5), reintentando en $((i*10))s..."; sleep $((i*10))
+         done
+         python -c "import numpy, scipy, sklearn, requests, bs4, openpyxl"
 
      - name: 🌙 Sincronizar historial Nacional Noche
        run: python sync_history.py --lottery "Nacional Noche"
@@ -99,12 +107,18 @@ jobs:
        run: |
          git config user.name  "CLAUDE L-NACIONAL Bot"
          git config user.email "bot@claude-l-nacional"
-         git pull --rebase origin main
-
-
+         for i in 1 2 3; do
+           git pull --rebase origin main && break
+           echo "git pull falló (intento $i/3), reintentando..."; sleep 5
+         done
 
      - name: 📦 Instalar dependencias
-       run: pip install -r requirements.txt --break-system-packages
+       run: |
+         for i in 1 2 3 4 5; do
+           pip install -r requirements.txt --break-system-packages && break
+           echo "pip falló (intento $i/5), reintentando en $((i*10))s..."; sleep $((i*10))
+         done
+         python -c "import numpy, scipy, sklearn, requests, bs4, openpyxl"
 
      - name: 🎯 Verificar historial y generar picks Gana Más
        env:
@@ -117,7 +131,7 @@ jobs:
          if [ "${{ inputs.no_telegram }}" = "true" ]; then NOTG="--no-telegram"; fi
          if [ "${{ inputs.force }}" = "true" ]; then FORCE="--force"; fi
          if [ "${{ inputs.reset_today }}" = "true" ]; then RESET="--reset-today"; fi
-         python generate_picks.py --lottery "Gana Más" $NOTG $FORCE $RESET
+         python -u generate_picks.py --lottery "Gana Más" $NOTG $FORCE $RESET
 
      - name: 💾 Commit y push
        run: |
@@ -147,10 +161,18 @@ jobs:
        run: |
          git config user.name  "CLAUDE L-NACIONAL Bot"
          git config user.email "bot@claude-l-nacional"
-         git pull --rebase origin main
+         for i in 1 2 3; do
+           git pull --rebase origin main && break
+           echo "git pull falló (intento $i/3), reintentando..."; sleep 5
+         done
 
      - name: 📦 Instalar dependencias
-       run: pip install -r requirements.txt --break-system-packages
+       run: |
+         for i in 1 2 3 4 5; do
+           pip install -r requirements.txt --break-system-packages && break
+           echo "pip falló (intento $i/5), reintentando en $((i*10))s..."; sleep $((i*10))
+         done
+         python -c "import numpy, scipy, sklearn, requests, bs4, openpyxl"
 
      - name: 🎯 Sincronizar historial Gana Más
        run: python sync_history.py --lottery "Gana Más"
@@ -183,11 +205,18 @@ jobs:
        run: |
          git config user.name  "CLAUDE L-NACIONAL Bot"
          git config user.email "bot@claude-l-nacional"
-         git pull --rebase origin main
-
+         for i in 1 2 3; do
+           git pull --rebase origin main && break
+           echo "git pull falló (intento $i/3), reintentando..."; sleep 5
+         done
 
      - name: 📦 Instalar dependencias
-       run: pip install -r requirements.txt --break-system-packages
+       run: |
+         for i in 1 2 3 4 5; do
+           pip install -r requirements.txt --break-system-packages && break
+           echo "pip falló (intento $i/5), reintentando en $((i*10))s..."; sleep $((i*10))
+         done
+         python -c "import numpy, scipy, sklearn, requests, bs4, openpyxl"
 
      - name: 🌙 Verificar historial y generar picks Nacional Noche
        env:
@@ -200,7 +229,7 @@ jobs:
          if [ "${{ inputs.no_telegram }}" = "true" ]; then NOTG="--no-telegram"; fi
          if [ "${{ inputs.force }}" = "true" ]; then FORCE="--force"; fi
          if [ "${{ inputs.reset_today }}" = "true" ]; then RESET="--reset-today"; fi
-         python generate_picks.py --lottery "Nacional Noche" $NOTG $FORCE $RESET
+         python -u generate_picks.py --lottery "Nacional Noche" $NOTG $FORCE $RESET
 
      - name: 💾 Commit y push
        run: |

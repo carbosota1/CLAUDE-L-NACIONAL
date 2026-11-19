@@ -27,20 +27,20 @@
       "total_won": 0.0
     },
     "Nacional Noche": {
-      "total_picks": 189,
-      "verified_picks": 169,
+      "total_picks": 190,
+      "verified_picks": 170,
       "hits": 2,
-      "alt_hits": 1,
-      "total_hits": 3,
-      "hit_rate": 10.0,
+      "alt_hits": 2,
+      "total_hits": 4,
+      "hit_rate": 13.3,
       "main_hit_rate": 6.7,
-      "alt_hit_rate": 3.3,
-      "streak": -6,
+      "alt_hit_rate": 6.7,
+      "streak": -7,
       "roi": 0.0,
       "total_invested": 0.0,
       "total_won": 0.0
     }
   },
   "log": [],
-  "last_updated": "2026-11-19T16:02:04.980969"
+  "last_updated": "2026-11-19T22:29:04.426489"
 }
